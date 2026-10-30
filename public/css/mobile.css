@@ -1,0 +1,520 @@
+/* 手机版界面
+   ────────────────────────────────────────────────
+   桌面：左边一列导航 + 中间一张纸 + 底部世界条
+   手机：顶部标题栏 + 内容 + 底部世界条 + 底部标签栏
+   用的是同一份 DOM：把 .sheet / .rail 变成 display:contents，
+   里面的 .brand / .rail-foot / .nav / .canvas 就直接成了 .app 的网格项，
+   再用 grid-template-areas 重新摆位置。没有第二套 HTML，也没有第二套逻辑。 */
+
+@media (max-width: 900px) {
+  :root {
+    --band: 80px;
+    --inset: 0px;
+    --fs-pixel-l: 24px;
+    --fs-pixel-xl: 36px;
+  }
+
+  html,
+  body {
+    height: 100%;
+    overscroll-behavior-y: none;
+  }
+
+  body {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* ── 外壳 ─────────────────────────────────────── */
+  .app {
+    position: fixed;
+    inset: 0;
+    height: 100dvh;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: 52px minmax(0, 1fr) var(--band) auto;
+    grid-template-areas:
+      'brand foot'
+      'canvas canvas'
+      'band band'
+      'nav nav';
+    padding: 0;
+    background: transparent;
+  }
+
+  .sheet,
+  .rail {
+    display: contents;
+  }
+
+  /* ── 顶部标题栏 ───────────────────────────────── */
+  .brand {
+    grid-area: brand;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding: 0 4px 0 14px;
+    background: var(--paper);
+    border-bottom: var(--px) solid var(--line);
+    min-width: 0;
+  }
+
+  .brand-name {
+    font-family: var(--font-pixel);
+    font-size: 19px;
+    line-height: 1;
+  }
+
+  .brand-sub {
+    display: none;
+  }
+
+  .brand .mark svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .rail-foot {
+    grid-area: foot;
+    margin: 0;
+    padding: 0 10px 0 6px;
+    background: var(--paper);
+    border-top: none;
+    border-bottom: var(--px) solid var(--line);
+    min-height: 52px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .whoami b,
+  .whoami span {
+    display: none;
+  }
+
+  .whoami img {
+    height: 26px;
+    width: auto;
+    display: block;
+  }
+
+  .rail-foot .btn {
+    min-height: 34px;
+    padding: 4px 10px;
+  }
+
+  /* ── 内容区 ───────────────────────────────────── */
+  .canvas {
+    grid-area: canvas;
+    padding: 14px 12px 18px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    min-height: 0;
+    background: var(--paper);
+  }
+
+  .view-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding-bottom: 10px;
+    margin-bottom: 16px;
+  }
+
+  .view-head h1 {
+    font-size: 26px;
+  }
+
+  .view-sub {
+    font-size: 13px;
+    margin-top: 6px;
+  }
+
+  .view-actions {
+    width: 100%;
+  }
+
+  .view-actions .btn {
+    flex: 1 1 auto;
+  }
+
+  /* ── 底部世界条 + 播放按钮 ────────────────────── */
+  .band {
+    grid-area: band;
+    padding: 0 12px 8px;
+    align-items: flex-end;
+    pointer-events: none;
+  }
+
+  .band-note {
+    display: none;
+  }
+
+  .pocket {
+    margin-left: auto;
+    padding: 0;
+    min-height: 0;
+    border: none;
+    box-shadow: none;
+    background: transparent;
+    gap: 0;
+  }
+
+  .pocket-meta,
+  #pocket-next {
+    display: none;
+  }
+
+  .pocket-play {
+    width: 42px;
+    height: 42px;
+    background: var(--paper);
+    border: var(--px) solid var(--line);
+    box-shadow: 2px 2px 0 var(--shadow-hard);
+    color: var(--accent);
+  }
+
+  .pocket-play:active {
+    transform: translate(2px, 2px);
+    box-shadow: none;
+  }
+
+  /* ── 底部标签栏 ───────────────────────────────── */
+  .nav {
+    grid-area: nav;
+    display: flex;
+    flex-direction: row;
+    gap: 0;
+    overflow: visible;
+    padding: 4px 2px calc(4px + env(safe-area-inset-bottom));
+    background: var(--paper);
+    border-top: var(--px) solid var(--line);
+    border-right: none;
+    min-height: 0;
+  }
+
+  .nav-item {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    min-height: 54px;
+    padding: 6px 2px;
+    flex-direction: column;
+    gap: 3px;
+    justify-content: center;
+    text-align: center;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    font-size: 11px;
+    line-height: 1.15;
+    white-space: nowrap;
+  }
+
+  .nav-item .px-icon {
+    width: 19px;
+    height: 19px;
+  }
+
+  .nav-item[aria-current='page'] {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    color: var(--accent);
+  }
+
+  .nav-item[aria-current='page'] .px-icon {
+    color: var(--accent);
+  }
+
+  .nav-item[aria-current='page'] span {
+    color: var(--accent);
+  }
+
+  .nav-item:active {
+    background: var(--paper-2);
+  }
+
+  .nav-full {
+    display: none;
+  }
+
+  .nav-short {
+    display: inline;
+  }
+
+  /* ── 触控友好的零件 ───────────────────────────── */
+  .btn {
+    min-height: 44px;
+  }
+
+  .btn-sm {
+    min-height: 36px;
+  }
+
+  .btn-icon {
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  .input,
+  .textarea,
+  .select {
+    font-size: 16px; /* 小于 16px iOS 会自动放大页面 */
+    padding: 12px;
+  }
+
+  .card {
+    padding: 14px;
+  }
+
+  .grid-2,
+  .grid-3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tile-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .stat-row dd {
+    font-size: 20px;
+  }
+
+  .time-big {
+    font-size: 40px;
+  }
+
+  .time-live {
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .note-bubble {
+    max-width: 100%;
+  }
+
+  .note-del {
+    opacity: 1;
+  }
+
+  .moment-cols {
+    columns: 1;
+  }
+
+  .moment-photos {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cover {
+    width: 92px;
+    height: 58px;
+  }
+
+  .player-side {
+    display: none;
+  }
+
+  .viz {
+    height: 38px;
+  }
+
+  .cal-wrap {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cal-head {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .cal-week span {
+    font-size: 11px;
+    padding: 5px 0;
+  }
+
+  .cal-cell {
+    min-height: 52px;
+    padding: 4px 3px;
+    gap: 1px;
+  }
+
+  .cal-day {
+    font-size: 12px;
+  }
+
+  .cal-lunar {
+    font-size: 9px;
+  }
+
+  .cal-mark {
+    font-size: 9px;
+    padding: 0 2px;
+    gap: 1px;
+    border-width: 1px;
+  }
+
+  .cal-mark .px-icon {
+    width: 8px;
+    height: 8px;
+  }
+
+  /* ── 弹窗变底部抽屉 ───────────────────────────── */
+  .modal {
+    margin: auto 0 0;
+    width: 100%;
+    max-width: 100%;
+    max-height: 92dvh;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    box-shadow: 0 -4px 0 rgba(20, 15, 28, 0.12);
+    animation: sheet-up 180ms steps(3, end);
+  }
+
+  .modal-form {
+    max-height: 92dvh;
+  }
+
+  .modal-head {
+    padding: 12px 14px;
+  }
+
+  .modal-head h2 {
+    font-size: 20px;
+  }
+
+  .modal-body {
+    padding: 14px;
+    gap: 14px;
+  }
+
+  .modal-foot {
+    padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
+    position: sticky;
+    bottom: 0;
+  }
+
+  .lightbox-body {
+    padding: 10px;
+  }
+
+  .lightbox-img {
+    max-height: 56dvh;
+  }
+
+  @keyframes sheet-up {
+    from {
+      transform: translateY(24px);
+      opacity: 0.4;
+    }
+  }
+
+  /* ── 提示浮在世界条上方 ───────────────────────── */
+  .toasts {
+    bottom: calc(var(--band) + 62px + env(safe-area-inset-bottom));
+    left: 12px;
+    right: 12px;
+    transform: none;
+    justify-items: stretch;
+  }
+
+  .toast {
+    text-align: center;
+  }
+
+  /* ── 登录页 ───────────────────────────────────── */
+  .login {
+    padding: 14px;
+    align-items: center;
+  }
+
+  .login-card {
+    padding: 20px 16px;
+    box-shadow: 4px 4px 0 var(--shadow-hard);
+  }
+
+  .login-brand {
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .login-brand h1 {
+    font-size: 30px;
+  }
+
+  .login-brand p {
+    font-size: 13px;
+  }
+
+  .who-option {
+    padding: 10px 6px;
+    min-height: 84px;
+  }
+
+  .who-option img {
+    height: 44px;
+  }
+
+  .who-pick {
+    gap: 10px;
+  }
+
+  .login-foot {
+    font-size: 12px;
+  }
+}
+
+/* 小屏（iPhone SE 之类）再收一点 */
+@media (max-width: 380px) {
+  :root {
+    --band: 72px;
+  }
+
+  .brand-name {
+    font-size: 17px;
+  }
+
+  .nav-item {
+    font-size: 10px;
+  }
+
+  .nav-item .px-icon {
+    width: 17px;
+    height: 17px;
+  }
+
+  .cal-cell {
+    min-height: 46px;
+    padding: 3px 2px;
+  }
+
+  .cal-mark {
+    font-size: 8px;
+  }
+
+  .time-big {
+    font-size: 34px;
+  }
+}
+
+/* 横屏手机：别把内容挤扁 */
+@media (max-width: 900px) and (orientation: landscape) and (max-height: 520px) {
+  :root {
+    --band: 56px;
+  }
+
+  .app {
+    grid-template-rows: 44px minmax(0, 1fr) var(--band) auto;
+  }
+
+  .nav-item {
+    min-height: 42px;
+    flex-direction: row;
+    gap: 6px;
+    font-size: 12px;
+  }
+}

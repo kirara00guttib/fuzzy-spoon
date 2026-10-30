@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>日记本 · 只有两个人能打开</title>
+    <meta name="description" content="neko 和金毛的私人日记：恋爱时间、歌、悄悄话、日常、照片墙和日历。" />
+    <meta name="theme-color" content="#fbf4e6" />
+    <link rel="icon" href="/img/favicon.svg" type="image/svg+xml" />
+    <link rel="preload" href="/fonts/zpix.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="/css/tokens.css" />
+    <link rel="stylesheet" href="/css/app.css" />
+    <link rel="stylesheet" href="/css/views.css" />
+    <link rel="stylesheet" href="/css/mobile.css" />
+    <script src="/js/guard.js"></script>
+    <script type="module" src="/js/main.js"></script>
+  </head>
+  <body>
+    <canvas id="world" aria-hidden="true"></canvas>
+
+    <!-- 登录 -->
+    <div class="login" id="login" hidden>
+      <div class="login-card" id="login-card">
+        <div class="pin" aria-hidden="true"></div>
+        <div class="login-brand">
+          <span class="mark" aria-hidden="true">
+            <svg viewBox="0 0 16 16" width="34" height="34" shape-rendering="crispEdges" fill="currentColor">
+              <rect x="2" y="3" width="2" height="2" />
+              <rect x="6" y="2" width="2" height="2" />
+              <rect x="10" y="3" width="2" height="2" />
+              <rect x="12" y="6" width="2" height="2" />
+              <rect x="2" y="7" width="2" height="2" />
+              <rect x="4" y="9" width="8" height="1" />
+              <rect x="5" y="10" width="6" height="1" />
+              <rect x="6" y="11" width="4" height="1" />
+              <rect x="7" y="12" width="2" height="1" />
+            </svg>
+          </span>
+          <div>
+            <h1>日记本</h1>
+            <p>neko 和金毛的日记本。只有两把钥匙。</p>
+          </div>
+        </div>
+
+        <form class="login-form" id="login-form" novalidate>
+          <fieldset class="who-field">
+            <legend>你是谁</legend>
+            <div class="who-pick" id="who-pick"></div>
+          </fieldset>
+
+          <label class="field">
+            <span class="field-label">密码</span>
+            <input class="input" id="login-pass" name="password" type="password" autocomplete="current-password" required />
+          </label>
+          <input type="text" name="username" autocomplete="username" hidden />
+
+          <p class="login-error" id="login-error" role="alert" hidden></p>
+
+          <button class="btn btn-primary btn-wide" id="login-submit" type="submit">推门进去</button>
+        </form>
+
+        <p class="login-foot">照片走 Cloudflare R2 的预签名直传，密钥只待在你自己的机器上。</p>
+      </div>
+    </div>
+
+    <!-- 日记本 -->
+    <div class="app" id="app" hidden>
+      <div class="sheet">
+        <aside class="rail">
+          <div class="brand">
+            <div class="brand-row">
+              <span class="mark" aria-hidden="true">
+                <svg viewBox="0 0 16 16" width="18" height="18" shape-rendering="crispEdges" fill="currentColor">
+                  <rect x="3" y="4" width="3" height="3" />
+                  <rect x="10" y="4" width="3" height="3" />
+                  <rect x="5" y="8" width="6" height="4" />
+                </svg>
+              </span>
+              <span class="brand-name">日记本</span>
+            </div>
+            <span class="brand-sub" id="brand-sub">neko &amp; 金毛 的日记本</span>
+          </div>
+
+          <nav class="nav" id="nav" aria-label="房间"></nav>
+
+          <div class="rail-foot">
+            <div class="whoami" id="whoami"></div>
+            <button class="btn btn-sm btn-quiet" id="logout">离开</button>
+          </div>
+        </aside>
+
+        <main class="canvas" id="canvas">
+          <div class="view" id="view" tabindex="-1"></div>
+        </main>
+      </div>
+
+      <div class="band">
+        <p class="band-note" id="band-note"></p>
+        <div class="pocket" id="pocket">
+          <button class="pocket-btn pocket-play" id="pocket-play" aria-label="播放"></button>
+          <button class="pocket-meta" id="pocket-meta" aria-label="去听歌的房间">
+            <span class="pocket-title" id="pocket-title">午后散步</span>
+            <span class="pocket-sub" id="pocket-sub">点一下播放</span>
+          </button>
+          <button class="pocket-btn" id="pocket-next" aria-label="下一首">
+            <svg viewBox="0 0 12 12" width="13" height="13" shape-rendering="crispEdges" fill="currentColor" aria-hidden="true">
+              <rect x="2" y="2" width="2" height="8" />
+              <rect x="4" y="3" width="1" height="6" />
+              <rect x="5" y="4" width="1" height="4" />
+              <rect x="6" y="5" width="1" height="2" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toasts" id="toasts" aria-live="polite"></div>
+    <dialog id="modal" class="modal"></dialog>
+    <dialog id="lightbox" class="modal lightbox"></dialog>
+
+    <noscript>
+      <p style="padding: 24px; font-family: sans-serif">
+        这本日记要靠 JavaScript 才能画出天空和两个走路的小动物，麻烦开一下。
+      </p>
+    </noscript>
+  </body>
+</html>

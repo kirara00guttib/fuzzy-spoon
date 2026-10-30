@@ -1,1 +1,268 @@
-# fuzzy-spoon
+# 日记本 · Our Diary
+
+一个只给两个人用的小网站：恋爱时间、一起听歌、悄悄话、日常分享、照片墙、日历。
+背景是一条一直在走的像素世界 —— 天空跟着真实时间变色，草木跟着季节变，一只小猫（neko）和一只小狗（金毛）并排走画面底部。
+
+- 只有两个账号能进：`superneko111`（neko）和 `handsomejinmao`（金毛）
+- 照片走 **S3 兼容 API + 预签名 URL**（默认 Cloudflare R2）：密钥只留在服务端，浏览器只会拿到一条 10 分钟后失效、且只能写这一张图的链接
+- 没配云存储也能用：照片会自动存到本机 `data/uploads/`
+
+---
+
+## 一、跑起来
+
+需要 Node 20+（本机已是 24）。
+
+```bash
+cd walk-with-you
+node server/index.mjs
+```
+
+然后打开 <http://127.0.0.1:5173>，用上面两个账号之一登录。
+
+Windows 上也可以双击 `start.bat`（启动服务并打开浏览器）。
+
+> 首次登录后会自动开始放背景音乐 —— 浏览器要求「用户点过页面」才允许出声，所以音乐是在你点「推门进去」之后才开始的。右下角的小卡带机可以随时暂停 / 下一首。
+
+## 二、账号与密码
+
+两个账号写在 `.env` 里，改完重启服务即可生效：
+
+```ini
+USER1_ID=superneko111
+USER1_NAME=neko
+USER1_PASS=miaomiaomiao@lxj
+
+USER2_ID=handsomejinmao
+USER2_NAME=金毛
+USER2_PASS=AaA@neko
+```
+
+`.env` 不要提交到任何仓库（`.gitignore` 已经排除了它）。ID 是登录用的用户名，NAME 只用于显示。
+
+---
+
+## 三、存储方案（挑一个就行）
+
+先分清「存什么」：
+
+| 存什么 | 大概多大 | 存在哪 |
+| --- | --- | --- |
+| 文字：悄悄话、日常、生日设置、纪念日、照片备注 | 几十 KB～几 MB | **永远在本机** `data/store.json` |
+| 照片文件 | 每张 0.5–5 MB | 方案 A 本机 / 方案 B R2 / 方案 C 其它 S3 |
+
+三个方案的差别只在**照片放哪**。文字数据永远是本地那个 JSON 文件，换方案不用迁移。
+
+### 方案 A：全部存本机（现在就在跑，零成本）
+
+- 照片在 `data/uploads/`，记录在 `data/store.json`
+- 好处：不用注册、不联网、最私密；坏处：手机要看得开电脑，硬盘坏了就全没了
+- 备份：**双击 `backup.bat`**（或 `node tools/backup.mjs`）—— 把 `data/` 复制到 `backups/backup-时间戳/`，自动只留最近 14 份
+- 适合：先玩起来，或者只在一台电脑上看
+
+### 方案 B：照片放 Cloudflare R2（推荐）
+
+免费额度 10 GB 存储 + 每月 1000 万次读 / 100 万次写，家用完全够；读取走的是浏览器直连，不消耗你服务器的带宽。
+
+**1. 建桶**：Cloudflare 控制台 → R2 → Create bucket，名字随意（例：`walk-with-you`），保持**私密**（不要开 Public access）。
+
+**2. 拿凭据**：R2 → Manage R2 API Tokens → Create API token
+
+- 权限：**Object Read & Write**
+- 资源：只选这个桶
+- 生成后记下 `Access Key ID`、`Secret Access Key`，以及页面上的 `Account ID`
+
+**3. 填 `.env` 并重启**
+
+```ini
+R2_ACCOUNT_ID=你的账户ID
+R2_ACCESS_KEY_ID=你的AccessKeyID
+R2_SECRET_ACCESS_KEY=你的SecretAccessKey
+R2_BUCKET=walk-with-you
+R2_PUBLIC_BASE=
+```
+
+**4. 配 CORS**（不配的话浏览器直传会被拦）
+
+R2 → 你的桶 → Settings → CORS Policy：
+
+```json
+[
+  {
+    "AllowedOrigins": ["http://127.0.0.1:5173", "http://localhost:5173"],
+    "AllowedMethods": ["PUT", "GET", "HEAD"],
+    "AllowedHeaders": ["*"],
+    "ExposeHeaders": ["ETag"],
+    "MaxAgeSeconds": 3600
+  }
+]
+```
+
+以后换域名/局域网 IP 访问，把那个地址也加进 `AllowedOrigins`。
+
+**5. 验证**：重启服务，启动日志出现 `照片存储: Cloudflare R2 · walk-with-you`；进「照片墙」，右上角徽标变成 `Cloudflare R2 · 预签名直传`，传一张照片试试。
+
+**预签名是怎么走的：**
+
+```
+浏览器                      本站服务端                    Cloudflare R2
+  │ 1. POST /api/uploads/presign  │                            │
+  ├──────────────────────────────>│ 用密钥在本地算签名          │
+  │ 2. { uploadUrl(10分钟), key } │                            │
+  │<──────────────────────────────┤                            │
+  │ 3. PUT 图片字节 ──────────────────────────────────────────>│
+  │ 4. POST /api/photos { key }   │ 记下照片记录                │
+  ├──────────────────────────────>│                            │
+  │ 5. GET /api/photos → 每条带一个临时 GET 链接（6 小时）       │
+```
+
+- 服务端只用 `node:crypto` 手写 SigV4，没引入 AWS SDK；`node server/selftest.mjs` 用 AWS 官方示例向量校验签名
+- 上传链接签名绑定了 `Content-Type`，10 分钟后自动失效
+- 密钥不会出现在任何返回给浏览器的响应里
+
+### 方案 C：换别的 S3 兼容服务
+
+代码里已经留了通用入口，改三个变量就行（桶同样要配 CORS）：
+
+```ini
+S3_ENDPOINT=oss-cn-hangzhou.aliyuncs.com   # 服务商域名，不带 https://
+S3_PATH_STYLE=0                            # 0=桶名进域名，1=桶名在路径里
+R2_REGION=cn-hangzhou                      # 服务商的 region
+R2_BUCKET=你的桶名
+R2_ACCESS_KEY_ID=...
+R2_SECRET_ACCESS_KEY=...
+```
+
+| 服务 | S3_ENDPOINT | S3_PATH_STYLE | R2_REGION |
+| --- | --- | --- | --- |
+| Cloudflare R2 | 留空（用账户域名） | `1` | `auto` |
+| 阿里云 OSS | `oss-cn-hangzhou.aliyuncs.com` | `0` | `cn-hangzhou` |
+| 腾讯云 COS | `cos.ap-guangzhou.myqcloud.com` | `0` | `ap-guangzhou` |
+| Backblaze B2 | `s3.us-west-004.backblazeb2.com` | `1` | `us-west-004` |
+| 自建 MinIO | `你的域名:9000` | `1` | `us-east-1` |
+
+### 怎么选
+
+| | 花钱 | 照片在哪 | 手机能看 | 建议 |
+| --- | --- | --- | --- | --- |
+| A 本机 | 0 | 电脑硬盘 | 同一个 Wi-Fi 才行 | 先这样用 |
+| B R2 | 0（10 GB 内） | Cloudflare | 能 | **推荐** |
+| C 其它 S3 | 几元/月 | 国内云 | 能，国内更快 | 照片多或想加速 |
+
+### 备份
+
+- **文字 + 本机照片**：`backup.bat` / `node tools/backup.mjs`，一次复制一份，留最近 14 份
+- **R2 里的照片**：控制台给桶开 Object Versioning，或用 `rclone sync` 定期同步到本地；`data/store.json` 里存着每张照片的 key，别只备份一半
+- 想彻底重来：删掉 `data/store.json` 再重启（照片文件在 `data/uploads/` 里要一起删）
+
+## 四、数据存在哪
+
+| 东西 | 位置 |
+| --- | --- |
+| 悄悄话、日常、照片记录、纪念日、设置 | `data/store.json`（纯 JSON，直接备份） |
+| 本机模式下的照片文件 | `data/uploads/` |
+| 会话签名密钥 | `data/session-secret`（自动生成） |
+| 备份 | `backups/backup-时间戳/` |
+
+## 五、让手机也能打开
+
+默认只监听本机。改 `.env`：
+
+```ini
+HOST=0.0.0.0
+```
+
+重启后日志会打印局域网地址（形如 `http://192.168.1.23:5173`），同一 Wi-Fi 下手机就能打开。用 R2 的话记得把这个 IP 也加进桶的 `AllowedOrigins`。
+
+⚠️ 要从公网访问请一定套 HTTPS（Cloudflare Tunnel / Caddy / Nginx），并把 `COOKIE_SECURE=1` 打开，否则密码是明文在网络里走的。
+
+### 手机版界面
+
+宽度 ≤ 900px 时自动切到手机版（`public/css/mobile.css`），和桌面用的是同一份 HTML、同一套 JS，只把外壳重新摆了一遍：
+
+| | 桌面 | 手机 |
+| --- | --- | --- |
+| 导航 | 左边一列 | **底部标签栏**（6 个，拇指够得到，带安全区留白） |
+| 顶部 | 无 | 标题栏：日记本 + 你的小动物头像 + 离开 |
+| 内容 | 一张纸居中 | 通栏卡片，字号和触控区加大（按钮 ≥ 44px） |
+| 底部 | 世界条 + 卡带机 | 世界条（80px，猫和狗仍在走）+ 一个悬浮播放按钮 |
+| 弹窗 | 居中对话框 | **底部抽屉**（贴合拇指，底部按钮常驻） |
+| 日历 | 左边日历 + 右边清单 | 日历先行，清单往下排 |
+| 照片墙 | 自适应列 | 固定两列 |
+
+实现上没有第二套 DOM：用 `display: contents` 把 `.sheet` / `.rail` 拆开，里面的品牌、导航、内容、底部条就直接成为网格项，再用 `grid-template-areas` 重新摆放。世界里的两只小动物会读底部标签栏的实际高度，自动站进"世界条"（`world.relayout()`），所以手机和桌面上都不会被挡住。
+
+## 六、六个房间
+
+| 房间 | 有什么 |
+| --- | --- |
+| **恋爱时间** | 在一起的天/时/分/秒实时跳、距下一个整百天的进度、下一次周年、最近要来的日子；右上角「改一改」可改起始日期、两个名字、背景季节 |
+| **一起听歌** | 七首浏览器现场合成的小曲（循环、离线可听、不碰版权），频谱跟着跳；每首都有「去音乐网站」直连网易云搜原曲；也能收藏自己的链接 |
+| **悄悄话** | 留言板，带日期和作者，气泡左右分开，可删 |
+| **日常分享** | 文字 + 最多 3 张照片 + 心情 + 「戴上耳机」那首歌，瀑布流排布 |
+| **照片墙** | 拖进来就传，点开看大图、改备注、删掉；上传走预签名（或本机存储） |
+| **日历** | 公历 + 农历双行，自动标节日、两个人生日、在一起周年，也能自己加日子（可每年重复） |
+
+生日默认已经按需求设好：
+
+- **她（neko）**：农历闰三月初三（当年没有闰三月就按三月初三过，日历上会写清楚）
+- **我（金毛）**：中秋节后一天（自动按当年八月十五 + 1 天算）
+
+「日历 → 生日设置」里可以改规则。
+
+## 七、背景是怎么变的
+
+- **时间**：按本机时钟在 11 组关键色之间插值，天空分 14 段并做棋盘抖动，太阳/月亮沿弧线走，夜里出星星；晚 7 点到早 6 点界面自动切深色
+- **季节**：3–5 春（樱花飘）、6–8 夏（夜里萤火虫）、9–11 秋（落叶）、12–2 冬（下雪、积雪、树挂雪）
+- **两个小动物**：一只橘色小猫（22×24 像素，白肚子、翘尾巴、有条纹）和一只小金毛（23×26，垂耳），4 帧小跳、夜里身边一圈暖光，偶尔冒一颗小心心
+- 这两只的图形是从你给的两张 AI 像素画里提取的：**去白底 → 缩到像素网格 → 中位切分收成 14 色**，结果写在 `public/js/sprite-data.js`
+  - 想换图：把新图放进 `tools/sprite-extract/`，命名 `cat.webp` / `dog.webp`，跑一次 `node tools/extract-sprites.mjs`（默认 26/28 宽，也可以 `node tools/extract-sprites.mjs 30 32`）
+  - 这套提取也顺手做了俩事：把图里「AI 生成」的水印和地面投影一起去掉；自动裁掉四周空白，保证脚底贴着地面
+- 想提前看别的样子（不影响真实时间）：`http://127.0.0.1:5173/?hour=22&season=winter`、`?hour=6.3&season=spring`
+
+## 八、目录结构
+
+```
+walk-with-you/
+├─ server/
+│  ├─ index.mjs       HTTP 服务、路由、静态文件
+│  ├─ auth.mjs        登录、签名 Cookie、限速
+│  ├─ r2.mjs          SigV4 预签名（PUT / GET / DELETE，支持任意 S3 兼容）
+│  ├─ store.mjs       JSON 存储（串行写入、原子替换）
+│  ├─ config.mjs      读 .env、账号、密钥
+│  └─ selftest.mjs    签名自检
+├─ public/
+│  ├─ index.html
+│  ├─ css/            tokens（颜色/字号）、app（外壳/零件）、views（六个房间）、mobile（手机版布局）
+│  ├─ js/
+│  │  ├─ scene.js     世界：天空、季节、粒子、两个小动物
+│  │  ├─ sprites.js   像素动物的画法与 4 帧小跳
+│  │  ├─ sprite-data.js 从 AI 像素画里提取出来的网格 + 14 色板
+│  │  ├─ music.js     Web Audio 合成器与播放器
+│  │  ├─ lunar.js     农历、节日、生日、纪念日
+│  │  ├─ views/       六个房间
+│  │  └─ main.js      登录 / 导航 / 底部卡带机
+│  └─ fonts/zpix.woff2 像素中文字体（自托管，不联网）
+├─ tools/             截图探针、精灵提取、备份、造测试数据
+│  └─ sprite-extract/ 换图用的两张原图 + 提取页面
+├─ backup.bat         一键备份
+├─ start.bat          一键启动
+└─ data/              你的数据（自动创建）
+```
+
+## 九、常见问题
+
+**上传失败，提示「上传到 R2 失败（检查桶的 CORS 设置）」**
+桶的 CORS 没配，或 `AllowedOrigins` 里没有你访问的地址（要带端口）。按方案 B 第 4 步重配。
+
+**登录一直说密码不对**
+`.env` 改过但没重启；或密码框开着中文输入法打出了全角字符；或上面选的「你是谁」和密码不配对（现在会直接提示「这是另一个人的密码」）。
+
+**没有声音**
+浏览器不允许没点过的页面出声，点一下播放按钮即可。
+
+**日历上的农历不对？**
+农历用浏览器自带的 `Intl` 中国历法（Edge/Chrome/Safari 都支持）。不支持时农历那一行会自动隐藏，其他功能不受影响。
+
+**怎么停掉服务**
+在跑着 `node server/index.mjs` 的终端里按 `Ctrl + C`。

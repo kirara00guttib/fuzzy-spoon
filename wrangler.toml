@@ -1,0 +1,38 @@
+# Cloudflare Workers 部署配置
+# 文档：https://developers.cloudflare.com/workers/wrangler/configuration/
+
+name = "riji"
+main = "worker/index.mjs"
+compatibility_date = "2025-01-01"
+workers_dev = true
+
+# 前端静态文件（public/ 整个目录）
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+# 文字数据：一个 KV 键存整份 JSON
+# 部署前把 id 换成 `npx wrangler kv namespace create STORE` 输出的那个
+[[kv_namespaces]]
+binding = "STORE"
+id = "3402d412069f4a418a555fa59cf279ef"
+
+[vars]
+USER1_ID = "superneko111"
+USER1_NAME = "neko"
+USER2_ID = "handsomejinmao"
+USER2_NAME = "金毛"
+R2_REGION = "auto"
+S3_PATH_STYLE = "1"
+
+# 密钥不要写在这里！用：
+#   npx wrangler secret put USER1_PASS
+#   npx wrangler secret put USER2_PASS
+#   npx wrangler secret put AUTH_SECRET
+#   npx wrangler secret put R2_ACCOUNT_ID
+#   npx wrangler secret put R2_ACCESS_KEY_ID
+#   npx wrangler secret put R2_SECRET_ACCESS_KEY
+#   npx wrangler secret put R2_BUCKET
+
+[observability]
+enabled = true

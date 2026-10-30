@@ -1,0 +1,12 @@
+node_modules/
+data/
+.env
+*.log
+.hallmark/
+.taste-skill/
+.preview/
+tools/__pycache__/
+.wrangler/
+.dev.vars
+node_modules/
+backups/

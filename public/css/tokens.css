@@ -1,0 +1,89 @@
+/* 一起散步 · 设计令牌
+   一个地面（米黄纸）、一种墨色、一个主色（玫瑰）；
+   猫=青、金毛=金，只用在「人」和「日子」的标记上。
+   像素字只用 12 的整数倍，保证边缘是硬的。 */
+
+@font-face {
+  font-family: 'Zpix';
+  src: url('/fonts/zpix.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* 纸与墨 */
+  --paper: #fbf4e6;
+  --paper-2: #f5ead6;
+  --paper-3: #ecdec4;
+  --ink: #2b2436;
+  --ink-2: #5f5568;
+  --ink-3: #786d82;
+  --line: #2b2436;
+  --line-soft: #c8b696;
+
+  /* 主色与两个人的颜色 */
+  --rose: #c2506a;
+  --rose-hover: #ad4159;
+  --rose-soft: #f8dbe2;
+  --teal: #2c8378;
+  --teal-soft: #d6ebe6;
+  --gold: #a87a22;
+  --gold-soft: #f6e6c1;
+
+  --accent: var(--rose);
+  --accent-hover: var(--rose-hover);
+  --accent-ink: #fff8ee;
+  --focus: #efb93f;
+
+  /* 面 */
+  --shadow-hard: #2b2436;
+  --night-wash: transparent;
+
+  /* 字 */
+  --font-pixel: 'Zpix', ui-monospace, 'Courier New', monospace;
+  --font-text: 'PingFang SC', 'Microsoft YaHei UI', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif;
+
+  --fs-pixel-s: 12px;
+  --fs-pixel-m: 24px;
+  --fs-pixel-l: 36px;
+  --fs-pixel-xl: 48px;
+  --fs-body: 15px;
+  --fs-sub: 14px;
+
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 28px;
+  --sp-7: 40px;
+
+  --px: 2px;
+  --band: 136px;
+  --inset: 24px;
+  --rail: 228px;
+}
+
+/* 天黑以后，纸也变暗一点（跟着背景一起换） */
+:root[data-night='on'] {
+  --paper: #241d33;
+  --paper-2: #2c2440;
+  --paper-3: #3a3052;
+  --ink: #f6ecdc;
+  --ink-2: #c8bcd8;
+  --ink-3: #a295b8;
+  --line: #0f0b1a;
+  --line-soft: #493f66;
+  --rose: #f290a6;
+  --rose-hover: #f7a8ba;
+  --rose-soft: #4a2c3c;
+  --teal: #74cabe;
+  --teal-soft: #23423f;
+  --gold: #e9c072;
+  --gold-soft: #453a22;
+  --accent: #f290a6;
+  --accent-hover: #f7a8ba;
+  --accent-ink: #241d33;
+  --shadow-hard: #0b0814;
+}

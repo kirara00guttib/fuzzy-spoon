@@ -1,0 +1,98 @@
+// 由 tools/extract-sprites.mjs 从两张 AI 像素画里提取出来的精灵（去背景、缩到像素网格、收 14 色）。
+// 想换图：把新图放到 tools/sprite-extract/ 里命名成 cat.webp / dog.webp，再跑一次 node tools/extract-sprites.mjs
+
+export const CAT_ART = {
+  "w": 22,
+  "h": 24,
+  "rows": [
+    "...a..................",
+    "..kka.......a.........",
+    "..kkdcaaa.iiga........",
+    "..kmhbbbbiijga........",
+    ".ahhhbbbhhhmgj....acc.",
+    ".ihjbbbihhhhga...bbcca",
+    ".ijjjjjiihhhhd..fbbbc.",
+    "abbaajjaaihjja..befa..",
+    "nijnnnnaaijhhi.abbb...",
+    "nnmmmnmmjjbbbi..eec...",
+    ".nmmmmmmminbhaa.ccc...",
+    "..nmmmmmmmnnkcccccc...",
+    "..alllmmmmnccbcbbac...",
+    ".anmmllllldchbcfbfa...",
+    "..nmmnmmmmmhbbbfbee...",
+    "..ammmmmmmmbbhbfbee...",
+    "...mmmmmmhhehhffeee...",
+    "...anmmmhhhhheeeeee...",
+    "....ccmnhhhhheeeeea...",
+    "....hhllihhialeeeda...",
+    "....nhlaihhhllnncdl...",
+    "..llnmnmmnnaannmnalll.",
+    ".llllllnnnnlllllllll..",
+    "......lllalll........."
+  ],
+  "palette": {
+    "a": "#61261a",
+    "b": "#bc5c34",
+    "c": "#bf6536",
+    "d": "#d27a46",
+    "e": "#ecac64",
+    "f": "#f4ac64",
+    "g": "#f0ab71",
+    "h": "#f4b46e",
+    "i": "#fcba73",
+    "j": "#f8ba78",
+    "k": "#f8c598",
+    "l": "#ecd8d4",
+    "m": "#fcf4e4",
+    "n": "#fcfce8"
+  }
+};
+
+export const DOG_ART = {
+  "w": 23,
+  "h": 26,
+  "rows": [
+    ".............lcn.......",
+    "...........nlllllncc...",
+    "..........nlllllllljb..",
+    "........mlllllllllljj..",
+    "........mjllllllljllji.",
+    "........jjjljjlllallhfh",
+    ".......jjjllaalnnaliiff",
+    "......cfjiiiaannnngmiff",
+    "......cfffiminnaammmif.",
+    ".......fffillmnnmmnmff.",
+    "........fifllnnnennih..",
+    ".........fhhhnnnnnggm..",
+    "........chhhhhgggggmm..",
+    "........nmmhhigggggmm..",
+    "........jmmmmmhgmgmmm..",
+    ".......jjfmmmmmmmmmmm..",
+    "......njjjjlmmmmmmmmm..",
+    "......jjjjjljhmmmmmhi..",
+    ".l...cjjjjllllhmmmhh...",
+    "clj..jjjjjlllhigmjhl...",
+    ".hjjjjjjjiljjjcjjhhl...",
+    ".ffehjjjlfljjlljhhjj...",
+    "..beejjflmfljlleijjm...",
+    ".....hhmmmbljmmeggmmb..",
+    ".....kkkbjkbmmmkkgblk..",
+    ".........kkkbbkkkk....."
+  ],
+  "palette": {
+    "a": "#4c2017",
+    "b": "#81381e",
+    "c": "#913c1e",
+    "d": "#d4792f",
+    "e": "#f4a954",
+    "f": "#fcaa40",
+    "g": "#f4c37a",
+    "h": "#fcb95d",
+    "i": "#fcc96c",
+    "j": "#fce09c",
+    "k": "#f0dfd0",
+    "l": "#fcebaa",
+    "m": "#fcecbc",
+    "n": "#fcf4ce"
+  }
+};
