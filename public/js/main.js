@@ -219,11 +219,38 @@ function routeFromHash() {
   renderRoute(route);
 }
 
+let firstPaint = true;
+
+/** 翻页：整页绕着左边书脊转出去，新的一页从右边转进来 */
+async function flipPage(direction, duration) {
+  const stage = document.getElementById('canvas');
+  if (!stage || !stage.animate) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const out = direction === 'out';
+  stage.style.transformOrigin = 'left center';
+  const anim = stage.animate(
+    [
+      { transform: out ? 'perspective(1400px) rotateY(0deg)' : 'perspective(1400px) rotateY(78deg)', opacity: out ? 1 : 0.3 },
+      { transform: out ? 'perspective(1400px) rotateY(-78deg)' : 'perspective(1400px) rotateY(0deg)', opacity: out ? 0.3 : 1 },
+    ],
+    { duration, easing: out ? 'ease-in' : 'cubic-bezier(.2,.85,.25,1)', fill: 'forwards' },
+  );
+  await anim.finished.catch(() => {});
+  if (!out) {
+    // 收页：把两条动画都清掉，否则上一页的 rotateY 会留在元素上
+    stage.getAnimations().forEach((a) => a.cancel());
+    stage.style.transformOrigin = '';
+  }
+}
+
 async function renderRoute(route) {
   if (rendering) return;
   rendering = true;
-  const view = $('#view');
+  const view = document.getElementById('view');
+  const turning = !firstPaint;
+  firstPaint = false;
   try {
+    if (turning) await flipPage('out', 170);
     if (typeof cleanup === 'function') cleanup();
     cleanup = null;
     view.innerHTML = `<div class="empty"><span class="spinner"></span></div>`;
@@ -243,6 +270,7 @@ async function renderRoute(route) {
   } finally {
     view.removeAttribute('aria-busy');
     rendering = false;
+    if (turning) await flipPage('in', 240);
   }
 }
 

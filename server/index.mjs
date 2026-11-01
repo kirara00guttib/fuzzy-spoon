@@ -740,6 +740,25 @@ async function deleteObject(key) {
 }
 
 // ── 静态文件 ───────────────────────────────────────────
+// 每次启动换一个版本号：index.html 里的 css/js 链接会带上它，手机就不会一直吃旧缓存
+const ASSET_VERSION = Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+const indexCache = { html: null, version: null };
+
+function stampTags(html) {
+  const v = '?v=' + ASSET_VERSION;
+  return html
+    .replace(/(href="\/css\/[^"]+?)"/g, '$1' + v + '"')
+    .replace(/(src="\/js\/[^"]+?)"/g, '$1' + v + '"')
+    .replace(/(href="\/fonts\/[^"]+?)"/g, '$1' + v + '"');
+}
+
+/** 给 index.html 里的 css/js/font 链接带上版本号 */
+function versionedIndex(html) {
+  if (indexCache.version === ASSET_VERSION) return indexCache.html;
+  indexCache.html = stampTags(html);
+  indexCache.version = ASSET_VERSION;
+  return indexCache.html;
+}
 async function serveStatic(req, res, urlPath) {
   let rel = decodeURIComponent(urlPath);
   if (rel === '/' || rel === '') rel = '/index.html';
@@ -755,6 +774,17 @@ async function serveStatic(req, res, urlPath) {
     return res.end('404');
   }
   const ext = path.extname(target).toLowerCase();
+  if (ext === '.html') {
+    const html = versionedIndex(await fsp.readFile(target, 'utf8'));
+    const buf = Buffer.from(html, 'utf8');
+    res.writeHead(200, baseHeaders({
+      'Content-Type': MIME[ext],
+      'Content-Length': buf.length,
+      'Cache-Control': 'no-cache',
+    }));
+    if (req.method === 'HEAD') return res.end();
+    return res.end(buf);
+  }
   const immutable = ext === '.woff2';
   res.writeHead(200, baseHeaders({
     'Content-Type': MIME[ext] || 'application/octet-stream',

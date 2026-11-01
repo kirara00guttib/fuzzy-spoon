@@ -32,7 +32,7 @@
     height: 100dvh;
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-rows: 52px minmax(0, 1fr) var(--band) auto;
+    grid-template-rows: 44px minmax(0, 1fr) var(--band) auto;
     grid-template-areas:
       'brand foot'
       'canvas canvas'
@@ -54,15 +54,15 @@
     flex-direction: row;
     align-items: center;
     gap: 8px;
-    padding: 0 4px 0 14px;
+    padding: 0 4px 0 12px;
     background: var(--paper);
-    border-bottom: var(--px) solid var(--line);
+    border-bottom: var(--px) solid var(--line-soft);
     min-width: 0;
   }
 
   .brand-name {
     font-family: var(--font-pixel);
-    font-size: 19px;
+    font-size: 16px;
     line-height: 1;
   }
 
@@ -82,10 +82,10 @@
     background: var(--paper);
     border-top: none;
     border-bottom: var(--px) solid var(--line);
-    min-height: 52px;
+    min-height: 44px;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
   }
 
   .whoami b,
@@ -100,8 +100,8 @@
   }
 
   .rail-foot .btn {
-    min-height: 34px;
-    padding: 4px 10px;
+    min-height: 30px;
+    padding: 3px 9px;
   }
 
   /* ── 内容区 ───────────────────────────────────── */
@@ -121,20 +121,28 @@
   }
 
   .view-head {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-    padding-bottom: 8px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding-bottom: 6px;
     margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+
+  .view-head > div:first-child {
+    min-width: 0;
+    flex: 1 1 auto;
   }
 
   .view-head h1 {
-    font-size: 26px;
+    font-size: 21px;
   }
 
   .view-sub {
-    font-size: 13px;
-    margin-top: 6px;
+    font-size: 12px;
+    line-height: 1.45;
+    margin-top: 4px;
   }
 
   .view-actions {
@@ -181,8 +189,8 @@
 
   .head-play {
     display: inline-flex;
-    width: 34px;
-    height: 34px;
+    width: 30px;
+    height: 30px;
     border: var(--px) solid var(--line);
     background: var(--paper);
     color: var(--accent);
