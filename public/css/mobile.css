@@ -27,10 +27,13 @@
 
   /* ── 外壳 ─────────────────────────────────────── */
   .app {
+    /* 四周留白：让背景露出来，整页像一页纸浮在世界里 */
     position: fixed;
-    inset: 0;
-    height: 100dvh;
+    inset: 9px;
     display: grid;
+    border: var(--px) solid var(--line);
+    box-shadow: 3px 3px 0 rgba(20, 15, 28, 0.2);
+    overflow: hidden;
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-rows: 44px minmax(0, 1fr) var(--band) auto;
     grid-template-areas:

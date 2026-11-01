@@ -221,26 +221,48 @@ function routeFromHash() {
 
 let firstPaint = true;
 
-/** 翻页：整页绕着左边书脊转出去，新的一页从右边转进来 */
-async function flipPage(direction, duration) {
+/** 像素淡入淡出：整块内容按 4 档跳着淡出/淡入，再盖一层抖动像素，像画面被"点阵"吞掉又吐出来 */
+function dotLayer() {
+  let el = document.getElementById('page-dots');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'page-dots';
+    el.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(el);
+  }
+  return el;
+}
+
+async function pixelFade(direction) {
   const stage = document.getElementById('canvas');
   if (!stage || !stage.animate) return;
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const dots = dotLayer();
   const out = direction === 'out';
-  stage.style.transformOrigin = 'left center';
-  const anim = stage.animate(
-    [
-      { transform: out ? 'perspective(1400px) rotateY(0deg)' : 'perspective(1400px) rotateY(78deg)', opacity: out ? 1 : 0.3 },
-      { transform: out ? 'perspective(1400px) rotateY(-78deg)' : 'perspective(1400px) rotateY(0deg)', opacity: out ? 0.3 : 1 },
-    ],
-    { duration, easing: out ? 'ease-in' : 'cubic-bezier(.2,.85,.25,1)', fill: 'forwards' },
+
+  // 内容本体：跳着淡出/淡入（steps 让它一格一格地变，不是丝滑过渡）
+  const stageAnim = stage.animate(
+    out
+      ? [{ opacity: 1 }, { opacity: 0 }]
+      : [{ opacity: 0 }, { opacity: 1 }],
+    { duration: out ? 110 : 170, easing: 'steps(4, end)', fill: 'forwards' },
   );
-  await anim.finished.catch(() => {});
+  // 点阵层：闪一下，像像素被拆开又拼回去
+  const dotsAnim = dots.animate(
+    out
+      ? [{ opacity: 0, transform: 'none' }, { opacity: 0.92, transform: 'none' }]
+      : [{ opacity: 0.92, transform: 'none' }, { opacity: 0, transform: 'none' }],
+    { duration: out ? 110 : 170, easing: 'steps(3, end)', fill: 'forwards' },
+  );
+
+  await stageAnim.finished.catch(() => {});
   if (!out) {
-    // 收页：把两条动画都清掉，否则上一页的 rotateY 会留在元素上
     stage.getAnimations().forEach((a) => a.cancel());
-    stage.style.transformOrigin = '';
+    dots.getAnimations().forEach((a) => a.cancel());
+    dots.style.opacity = '0';
+    stage.style.opacity = '';
   }
+  void dotsAnim;
 }
 
 async function renderRoute(route) {
@@ -250,7 +272,7 @@ async function renderRoute(route) {
   const turning = !firstPaint;
   firstPaint = false;
   try {
-    if (turning) await flipPage('out', 170);
+    if (turning) await pixelFade('out');
     if (typeof cleanup === 'function') cleanup();
     cleanup = null;
     view.innerHTML = `<div class="empty"><span class="spinner"></span></div>`;
@@ -270,7 +292,7 @@ async function renderRoute(route) {
   } finally {
     view.removeAttribute('aria-busy');
     rendering = false;
-    if (turning) await flipPage('in', 240);
+    if (turning) await pixelFade('in');
   }
 }
 
