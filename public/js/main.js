@@ -62,11 +62,8 @@ let lastNight = null;
 function onWorldTick(info) {
   const note = $('#band-note');
   if (note) note.textContent = bandNote(info);
-  const night = info.night ? 'on' : 'off';
-  if (night !== lastNight) {
-    lastNight = night;
-    document.documentElement.dataset.night = night;
-  }
+  // 界面永远是纸的颜色（窗外的世界自己会入夜，不把整页压黑）
+  if (document.documentElement.dataset.night) delete document.documentElement.dataset.night;
 }
 
 // ── 底部卡带机 ──────────────────────────────────────────

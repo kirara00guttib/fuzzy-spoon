@@ -59,6 +59,11 @@
   --sp-6: 28px;
   --sp-7: 40px;
 
+  /* 书本 */
+  --cover: #8e4155;
+  --cover-edge: #5e2839;
+  --gutter: #efe2cb;
+
   --px: 2px;
   --band: 136px;
   --inset: 24px;

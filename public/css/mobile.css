@@ -105,6 +105,11 @@
   }
 
   /* ── 内容区 ───────────────────────────────────── */
+  .canvas::before,
+  .canvas::after {
+    display: none;
+  }
+
   .canvas {
     grid-area: canvas;
     padding: 14px 12px 18px;
@@ -285,6 +290,11 @@
 
   .nav-short {
     display: inline;
+  }
+
+  /* '目录' 只在桌面上有 */
+  .nav-caption {
+    display: none;
   }
 
   /* ── 触控友好的零件 ───────────────────────────── */

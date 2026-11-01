@@ -79,8 +79,8 @@ a {
 .login-card {
   width: min(430px, 100%);
   background: var(--paper);
-  border: var(--px) solid var(--line);
-  box-shadow: 6px 6px 0 var(--shadow-hard);
+  border: 8px solid var(--cover);
+  box-shadow: 0 0 0 2px var(--line), 6px 7px 0 rgba(20, 15, 28, 0.22);
   padding: var(--sp-6);
   position: relative;
 }
@@ -265,10 +265,11 @@ a {
   display: grid;
   grid-template-columns: var(--rail) minmax(0, 1fr);
   background: var(--paper);
-  border: var(--px) solid var(--line);
+  /* 书本：一圈厚书壳，里面才是纸 */
+  border: 9px solid var(--cover);
   min-height: 0;
   overflow: hidden;
-  box-shadow: 6px 6px 0 rgba(20, 15, 28, 0.16);
+  box-shadow: 0 0 0 2px var(--line), 7px 8px 0 rgba(20, 15, 28, 0.18);
 }
 
 :root[data-night='on'] .sheet {
@@ -338,10 +339,27 @@ a {
   background: var(--paper-3);
 }
 
+.nav-item {
+  position: relative;
+}
+
 .nav-item[aria-current='page'] {
   background: var(--paper);
-  border-color: var(--line);
-  box-shadow: 2px 2px 0 var(--shadow-hard);
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--accent);
+}
+
+/* 当前章节：从目录页探出的一小条书签 */
+.nav-item[aria-current='page']::after {
+  content: '';
+  position: absolute;
+  right: -4px;
+  top: 8px;
+  width: 9px;
+  height: 18px;
+  background: var(--accent);
+  border: var(--px) solid var(--line);
 }
 
 .nav-item[aria-current='page'] .px-icon {
@@ -389,10 +407,36 @@ a {
 }
 
 .canvas {
-  padding: var(--sp-6);
+  position: relative;
+  padding: var(--sp-6) var(--sp-6) var(--sp-6) calc(var(--sp-6) + 8px);
   overflow-y: auto;
   min-height: 0;
   scrollbar-width: thin;
+}
+
+/* 书脊：一道更深的纸色 + 三针线装 */
+.canvas::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  background: var(--gutter);
+  border-right: 1px solid var(--line-soft);
+  pointer-events: none;
+}
+
+.canvas::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 32%;
+  width: 4px;
+  height: 4px;
+  background: var(--line-soft);
+  box-shadow: 0 16px 0 var(--line-soft), 0 32px 0 var(--line-soft);
+  pointer-events: none;
 }
 
 /* ── 页面头 ─────────────────────────────────────────── */
@@ -574,7 +618,7 @@ a {
 }
 
 .card {
-  border: var(--px) solid var(--line);
+  border: var(--px) solid var(--line-soft);
   background: var(--paper);
   padding: var(--sp-4);
   min-width: 0;
