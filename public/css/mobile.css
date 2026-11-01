@@ -8,7 +8,7 @@
 
 @media (max-width: 900px) {
   :root {
-    --band: 80px;
+    --band: 74px;
     --inset: 0px;
     --fs-pixel-l: 24px;
     --fs-pixel-xl: 36px;
@@ -118,9 +118,9 @@
   .view-head {
     flex-direction: column;
     align-items: flex-start;
-    gap: 10px;
-    padding-bottom: 10px;
-    margin-bottom: 16px;
+    gap: 8px;
+    padding-bottom: 8px;
+    margin-bottom: 12px;
   }
 
   .view-head h1 {
@@ -133,33 +133,61 @@
   }
 
   .view-actions {
-    width: 100%;
-  }
-
-  .view-actions .btn {
-    flex: 1 1 auto;
+    width: auto;
   }
 
   /* ── 底部世界条 + 播放按钮 ────────────────────── */
   .band {
     grid-area: band;
-    padding: 0 12px 8px;
+    position: relative;
+    padding: 0;
     align-items: flex-end;
     pointer-events: none;
+    /* 用像素抖动把「画面」和「纸面」缝起来，不要一条硬边 */
+    --dither: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6'%3E%3Crect width='3' height='3' fill='white'/%3E%3Crect x='3' y='3' width='3' height='3' fill='white'/%3E%3C/svg%3E");
   }
+
+  .band::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 8px;
+    background: var(--paper);
+    -webkit-mask-image: var(--dither);
+    mask-image: var(--dither);
+    -webkit-mask-size: 6px 6px;
+    mask-size: 6px 6px;
+    pointer-events: none;
+  }
+
+  .band::before {
+    top: 0;
+  }
+
 
   .band-note {
     display: none;
   }
 
   .pocket {
-    margin-left: auto;
-    padding: 0;
-    min-height: 0;
-    border: none;
-    box-shadow: none;
-    background: transparent;
-    gap: 0;
+    display: none;
+  }
+
+  .head-play {
+    display: inline-flex;
+    width: 34px;
+    height: 34px;
+    border: var(--px) solid var(--line);
+    background: var(--paper);
+    color: var(--accent);
+    align-items: center;
+    justify-content: center;
+    flex: none;
+  }
+
+  .head-play:active {
+    transform: translate(1px, 1px);
   }
 
   .pocket-meta,
@@ -188,7 +216,7 @@
     flex-direction: row;
     gap: 0;
     overflow: visible;
-    padding: 4px 2px calc(4px + env(safe-area-inset-bottom));
+    padding: 2px 2px calc(6px + env(safe-area-inset-bottom));
     background: var(--paper);
     border-top: var(--px) solid var(--line);
     border-right: none;
@@ -218,11 +246,25 @@
     height: 19px;
   }
 
+  .nav-item {
+    position: relative;
+  }
+
   .nav-item[aria-current='page'] {
     background: transparent;
     border: none;
     box-shadow: none;
     color: var(--accent);
+  }
+
+  .nav-item[aria-current='page']::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: 28%;
+    right: 28%;
+    height: 3px;
+    background: var(--accent);
   }
 
   .nav-item[aria-current='page'] .px-icon {
@@ -267,7 +309,7 @@
   }
 
   .card {
-    padding: 14px;
+    padding: 13px;
   }
 
   .grid-2,

@@ -71,16 +71,29 @@ function onWorldTick(info) {
 
 // ── 底部卡带机 ──────────────────────────────────────────
 function paintPocket(state) {
+  const glow = state.playing ? 'pause' : 'play';
+  const label = state.playing ? '暂停' : '播放';
   const btn = $('#pocket-play');
-  if (!btn) return;
-  btn.innerHTML = icon(state.playing ? 'pause' : 'play', { size: 14 });
-  btn.setAttribute('aria-label', state.playing ? '暂停' : '播放');
-  $('#pocket-title').textContent = state.track.title;
-  $('#pocket-sub').textContent = state.playing ? '正在循环' : '点一下播放';
-  $('#pocket').classList.toggle('is-playing', state.playing);
+  if (btn) {
+    btn.innerHTML = icon(glow, { size: 14 });
+    btn.setAttribute('aria-label', label);
+  }
+  const head = $('#head-play');
+  if (head) {
+    head.innerHTML = icon(glow, { size: 13 });
+    head.setAttribute('aria-label', label);
+  }
+  const titleEl = $('#pocket-title');
+  if (titleEl) titleEl.textContent = state.track.title;
+  const subEl = $('#pocket-sub');
+  if (subEl) subEl.textContent = state.playing ? '正在循环' : '点一下播放';
+  $('#pocket')?.classList.toggle('is-playing', state.playing);
 }
 
 $('#pocket-play').addEventListener('click', () => {
+  player.toggle();
+});
+$('#head-play')?.addEventListener('click', () => {
   player.toggle();
 });
 $('#pocket-next').addEventListener('click', () => player.next());

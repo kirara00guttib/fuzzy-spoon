@@ -190,7 +190,9 @@ export function createWorld(canvas, { onTick } = {}) {
     anchors.horizon = Math.round(H * 0.5);
     anchors.groundTop = Math.round(H * 0.545);
     const bottom = bottomChrome();
-    anchors.feet = Math.round((cssH - bottom - 26) / unit);
+    // 手机底部有标签栏时，小动物再往下站一点，让脑袋露出世界条
+    const gap = bottom > 0 ? 13 : 26;
+    anchors.feet = Math.round((cssH - bottom - gap) / unit);
     anchors.path = clamp(anchors.feet, Math.round(H * 0.62), H - 4);
     anchors.unit = unit;
   }

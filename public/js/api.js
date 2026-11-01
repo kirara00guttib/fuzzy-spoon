@@ -25,6 +25,27 @@ async function request(path, { method = 'GET', body, raw } = {}) {
   return raw ? res : data;
 }
 
+/** 上传前在浏览器里压一下：长边不超过 1920、JPEG 0.82（5MB → 约 300KB，画质基本看不出差别） */
+async function shrinkImage(file, maxEdge = 1920, quality = 0.82) {
+  if (!/^image\/(jpeg|png|webp)$/i.test(file.type)) return file;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const longEdge = Math.max(bitmap.width, bitmap.height);
+    if (longEdge <= maxEdge && file.size <= 900 * 1024) return file;
+    const scale = Math.min(1, maxEdge / longEdge);
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
+    bitmap.close?.();
+    if (!blob || blob.size >= file.size) return file;
+    const name = file.name.replace(/\.[^.]+$/, '') + '.jpg';
+    return new File([blob], name, { type: 'image/jpeg' });
+  } catch {
+    return file;
+  }
+}
 function imageSize(file) {
   return new Promise((resolve) => {
     const url = URL.createObjectURL(file);
@@ -79,7 +100,8 @@ export const api = {
    * 照片上传：先跟服务端要一条预签名 PUT 链接，再直传 R2（或本机存储），
    * 浏览器全程拿不到任何密钥。
    */
-  async uploadPhoto(file, caption = '') {
+  async uploadPhoto(rawFile, caption = '') {
+    const file = await shrinkImage(rawFile);
     const presign = await request('/api/uploads/presign', {
       method: 'POST',
       body: { contentType: file.type || 'image/jpeg' },

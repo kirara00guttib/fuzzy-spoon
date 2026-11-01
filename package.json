@@ -4,7 +4,9 @@
   "private": true,
   "description": "两个人的私密日记：恋爱时间、歌、悄悄话、日常、照片墙、日历。",
   "type": "module",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "node server/index.mjs",
     "check": "node server/selftest.mjs",
@@ -12,5 +14,8 @@
     "deploy": "node tools/deploy-cloudflare.mjs",
     "push": "node tools/push-to-github.mjs",
     "backup": "node tools/backup.mjs"
+  },
+  "dependencies": {
+    "ssh2": "^1.17.0"
   }
 }
