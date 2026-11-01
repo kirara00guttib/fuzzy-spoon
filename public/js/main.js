@@ -12,6 +12,8 @@ import * as wordsView from './views/words.js';
 import * as momentsView from './views/moments.js';
 import * as galleryView from './views/gallery.js';
 import * as calendarView from './views/calendar.js';
+import * as cartView from './views/cart.js';
+import * as petView from './views/pet.js';
 
 const ROUTES = [
   { id: 'time', label: '恋爱时间', short: '时间', icon: 'heart', view: timeView },
@@ -20,6 +22,8 @@ const ROUTES = [
   { id: 'moments', label: '日常分享', short: '日常', icon: 'camera', view: momentsView },
   { id: 'gallery', label: '照片墙', short: '照片', icon: 'picture', view: galleryView },
   { id: 'calendar', label: '日历', short: '日历', icon: 'calendar', view: calendarView },
+  { id: 'cart', label: '购物车', short: '购物', icon: 'cart', view: cartView },
+  { id: 'pet', label: '培养', short: '培养', icon: 'sprout', view: petView },
 ];
 
 validateSprites();

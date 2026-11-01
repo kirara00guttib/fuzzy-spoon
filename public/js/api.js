@@ -107,4 +107,22 @@ export const api = {
     });
     return out.photo;
   },
+  // 购物车：想一起做的事
+  cart: {
+    list: () => request('/api/cart'),
+    add: (payload) => request('/api/cart', { method: 'POST', body: payload }),
+    update: (id, patch) => request('/api/cart/' + id, { method: 'PUT', body: patch }),
+    remove: (id) => request('/api/cart/' + id, { method: 'DELETE' }),
+  },
+
+  // 培养系统
+  pet: {
+    get: () => request('/api/pet'),
+    consent: () => request('/api/pet/consent', { method: 'POST', body: {} }),
+    care: (kind) => request('/api/pet/care', { method: 'POST', body: { kind } }),
+    talk: (text) => request('/api/pet/talk', { method: 'POST', body: { text } }),
+    seen: () => request('/api/pet/talk/seen', { method: 'POST', body: {} }),
+    open: () => request('/api/pet/open', { method: 'POST', body: {} }),
+    wish: (text, foodId) => request('/api/pet/wish', { method: 'POST', body: { text, foodId } }),
+  },
 };

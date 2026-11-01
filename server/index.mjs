@@ -9,6 +9,7 @@ import crypto from 'node:crypto';
 import { PORT, HOST, PUBLIC_DIR, UPLOAD_DIR, R2, ACCOUNTS } from './config.mjs';
 import * as auth from './auth.mjs';
 import * as store from './store.mjs';
+import { PET_STAGES } from './store.mjs';
 import { presignPut, presignGet, presignObject, r2Ready } from './r2.mjs';
 
 const MIME = {
@@ -405,6 +406,243 @@ on('DELETE', /^\/api\/tracks\/([a-f0-9]{16})$/, async (req, res, m) => {
     db.tracks = db.tracks.filter((t) => t.id !== m[1]);
   });
   ok(res);
+});
+
+// ── 购物车：想一起做的事 ────────────────────────────────
+on('GET', /^\/api\/cart$/, async (req, res) => {
+  const db = store.read();
+  ok(res, { cart: db.cart });
+});
+
+on('POST', /^\/api\/cart$/, async (req, res) => {
+  const body = await readJSON(req);
+  const value = text(body.text, 120);
+  if (!value) return bad(res, 400, '想做的事得写一句');
+  const item = await store.mutate((db) => {
+    const c = {
+      id: store.newId(),
+      text: value,
+      note: text(body.note, 200),
+      author: req.user.id,
+      authorName: req.user.name,
+      avatar: req.user.avatar,
+      createdAt: new Date().toISOString(),
+      done: false,
+      doneAt: null,
+      doneBy: null,
+    };
+    db.cart.unshift(c);
+    return c;
+  });
+  ok(res, { item });
+});
+
+on('PUT', /^\/api\/cart\/([a-f0-9]{16})$/, async (req, res, match) => {
+  const body = await readJSON(req);
+  const updated = await store.mutate((db) => {
+    const c = db.cart.find((x) => x.id === match[1]);
+    if (!c) return null;
+    if (body.done !== undefined) {
+      c.done = Boolean(body.done);
+      c.doneAt = c.done ? new Date().toISOString() : null;
+      c.doneBy = c.done ? req.user.name : null;
+    }
+    if (body.text !== undefined) c.text = text(body.text, 120) || c.text;
+    if (body.note !== undefined) c.note = text(body.note, 200);
+    return c;
+  });
+  if (!updated) return bad(res, 404, '这条不见了');
+  ok(res, { item: updated });
+});
+
+on('DELETE', /^\/api\/cart\/([a-f0-9]{16})$/, async (req, res, match) => {
+  await store.mutate((db) => {
+    db.cart = db.cart.filter((x) => x.id !== match[1]);
+  });
+  ok(res);
+});
+
+// ── 培养系统 ────────────────────────────────────────────
+const FOOD_POOL = ['burger', 'fries', 'cola', 'pizza', 'roastChicken', 'cake', 'cupcake', 'croissant', 'bubbleTea', 'lollipop'];
+const DAY = 86400000;
+
+function petView(db, user, now = Date.now()) {
+  const pet = db.pet;
+  const stage = PET_STAGES[pet.stage] || PET_STAGES[0];
+  const start = pet.stageStartedAt ? new Date(pet.stageStartedAt).getTime() : now;
+  const elapsed = Math.max(0, now - start);
+  const total = stage.days * DAY;
+  const careOk = ['water', 'weed', 'feed'].every((k) => (pet.care[k] || 0) >= stage.need[k]);
+  return {
+    status: pet.status,
+    stageIndex: pet.stage,
+    stage: { key: stage.key, name: stage.name, days: stage.days, need: stage.need },
+    stageCount: PET_STAGES.length,
+    care: pet.care,
+    careOk,
+    timeOk: elapsed >= total,
+    canAdvance: pet.status === 'growing' && elapsed >= total && careOk,
+    progress: Math.min(1, elapsed / total),
+    daysLeft: Math.max(0, Math.ceil((total - elapsed) / DAY)),
+    hoursLeft: Math.max(0, Math.ceil((total - elapsed) / 3600000)),
+    myConsent: Boolean(pet.consent[user.id]),
+    consent: Object.keys(pet.consent),
+    messages: (pet.messages || []).slice(-30),
+    foods: pet.foods || {},
+    wishes: (pet.wishes || []).slice().reverse(),
+    pending: pet.pending,
+    cycles: pet.cycles || 0,
+    partner: null,
+  };
+}
+
+/** 时间到了、照顾也够了，就自动长大（懒推进，访问时才算） */
+function petTick(db, now = Date.now()) {
+  const pet = db.pet;
+  let changed = false;
+  while (pet.status === 'growing') {
+    const stage = PET_STAGES[pet.stage];
+    if (!stage) break;
+    const start = pet.stageStartedAt ? new Date(pet.stageStartedAt).getTime() : now;
+    const due = now - start >= stage.days * DAY;
+    const cared = ['water', 'weed', 'feed'].every((k) => (pet.care[k] || 0) >= stage.need[k]);
+    if (!due || !cared) break;
+    if (pet.stage < PET_STAGES.length - 1) {
+      pet.stage += 1;
+      pet.stageStartedAt = new Date(now).toISOString();
+      pet.care = { water: 0, weed: 0, feed: 0 };
+    } else {
+      pet.status = 'ready';
+      pet.pending = { foodId: FOOD_POOL[Math.floor(Math.random() * FOOD_POOL.length)], at: new Date(now).toISOString() };
+      pet.cycles = (pet.cycles || 0) + 1;
+    }
+    changed = true;
+  }
+  return changed;
+}
+
+on('GET', /^\/api\/pet$/, async (req, res) => {
+  const changed = await store.mutate((db) => petTick(db));
+  const db = store.read();
+  ok(res, { pet: petView(db, req.user), advanced: changed, accounts: ACCOUNTS.map((a) => ({ id: a.id, name: a.name })) });
+});
+
+on('POST', /^\/api\/pet\/consent$/, async (req, res) => {
+  const result = await store.mutate((db) => {
+    const pet = db.pet;
+    if (pet.status === 'growing' || pet.status === 'ready') return { error: '已经在养啦' };
+    pet.consent[req.user.id] = new Date().toISOString();
+    const both = ACCOUNTS.every((a) => pet.consent[a.id]);
+    if (both) {
+      pet.status = 'growing';
+      pet.stage = 0;
+      pet.stageStartedAt = new Date().toISOString();
+      pet.startedAt = pet.stageStartedAt;
+      pet.care = { water: 0, weed: 0, feed: 0 };
+      pet.consent = {};
+      pet.pending = null;
+      return { started: true };
+    }
+    return { started: false };
+  });
+  if (result.error) return bad(res, 400, result.error);
+  const db = store.read();
+  ok(res, { started: result.started, pet: petView(db, req.user) });
+});
+
+on('POST', /^\/api\/pet\/care$/, async (req, res) => {
+  const body = await readJSON(req);
+  const kind = ['water', 'weed', 'feed'].includes(body.kind) ? body.kind : null;
+  if (!kind) return bad(res, 400, '不知道要做什么');
+  const result = await store.mutate((db) => {
+    const pet = db.pet;
+    if (pet.status !== 'growing') return { error: '现在没有在养' };
+    const stage = PET_STAGES[pet.stage];
+    if (pet.care[kind] >= stage.need[kind]) return { error: '这一项已经做够啦' };
+    pet.care[kind] += 1;
+    pet.lastCareAt = new Date().toISOString();
+    return { ok: true };
+  });
+  if (result.error) return bad(res, 400, result.error);
+  await store.mutate((db) => petTick(db));
+  const db = store.read();
+  ok(res, { pet: petView(db, req.user) });
+});
+
+on('POST', /^\/api\/pet\/talk$/, async (req, res) => {
+  const body = await readJSON(req);
+  const value = text(body.text, 300);
+  if (!value) return bad(res, 400, '说点什么吧');
+  const message = await store.mutate((db) => {
+    const m = {
+      id: store.newId(),
+      text: value,
+      author: req.user.id,
+      authorName: req.user.name,
+      avatar: req.user.avatar,
+      createdAt: new Date().toISOString(),
+      seenBy: [],
+    };
+    db.pet.messages = [...(db.pet.messages || []), m].slice(-60);
+    return m;
+  });
+  ok(res, { message });
+});
+
+on('POST', /^\/api\/pet\/talk\/seen$/, async (req, res) => {
+  await store.mutate((db) => {
+    for (const m of db.pet.messages || []) {
+      if (m.author === req.user.id) continue;
+      if (!m.seenBy) m.seenBy = [];
+      if (!m.seenBy.includes(req.user.id)) m.seenBy.push(req.user.id);
+    }
+  });
+  ok(res);
+});
+
+on('POST', /^\/api\/pet\/open$/, async (req, res) => {
+  const foodId = await store.mutate((db) => {
+    const pet = db.pet;
+    if (pet.status !== 'ready' || !pet.pending) return null;
+    const id = pet.pending.foodId;
+    pet.foods[id] = (pet.foods[id] || 0) + 1;
+    pet.pending = null;
+    pet.status = 'idle';
+    pet.stage = 0;
+    pet.stageStartedAt = null;
+    return id;
+  });
+  if (!foodId) return bad(res, 400, '还没有可以打开的箱子');
+  const db = store.read();
+  ok(res, { foodId, pet: petView(db, req.user) });
+});
+
+on('POST', /^\/api\/pet\/wish$/, async (req, res) => {
+  const body = await readJSON(req);
+  const value = text(body.text, 120);
+  if (!value) return bad(res, 400, '愿望得写一句');
+  const result = await store.mutate((db) => {
+    const pet = db.pet;
+    const owned = Object.entries(pet.foods || {}).filter(([, n]) => n > 0);
+    if (!owned.length) return { error: '还没有攒到吃的，先用一个再来许愿' };
+    const [foodId] = body.foodId && (pet.foods[body.foodId] || 0) > 0
+      ? [body.foodId]
+      : owned.sort((a, b) => b[1] - a[1])[0];
+    pet.foods[foodId] -= 1;
+    const wish = {
+      id: store.newId(),
+      text: value,
+      foodId,
+      from: req.user.id,
+      fromName: req.user.name,
+      createdAt: new Date().toISOString(),
+    };
+    pet.wishes = [...(pet.wishes || []), wish].slice(-50);
+    return wish;
+  });
+  if (result.error) return bad(res, 400, result.error);
+  const db = store.read();
+  ok(res, { wish: result, pet: petView(db, req.user) });
 });
 
 // 预签名上传

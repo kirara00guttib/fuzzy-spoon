@@ -2,7 +2,7 @@
 // 接口和本地 Node 版完全一致（前端一行都不用改），只是把
 //   data/store.json → KV      data/uploads → R2（预签名直传）
 import { accounts, parseCookies, readToken, issueToken, cookieFor, clearCookie, verifyCredentials, otherAccountWithPassword, tooManyAttempts, noteFailure, clearFailures, COOKIE_NAME } from './auth.mjs';
-import { read, mutate, newId } from './store.mjs';
+import { read, mutate, newId, PET_STAGES } from './store.mjs';
 import { presignPut, presignGet, presignDelete, r2Config, encodeKey } from './sigv4.mjs';
 
 const PHOTO_PREFIX = 'photos/';
@@ -353,6 +353,15 @@ async function handleApi(request, env) {
     return ok();
   }
 
+  if (path === '/api/cart' || path.startsWith('/api/cart/')) {
+    const r = await handleCartApi(request, env, path, method, user);
+    if (r) return r;
+  }
+  if (path === '/api/pet' || path.startsWith('/api/pet/')) {
+    const r = await handlePetApi(request, env, path, method, user);
+    if (r) return r;
+  }
+
   if (method === 'GET' && path === '/api/tracks') {
     const db = await read(env);
     return ok({ tracks: db.tracks });
@@ -377,6 +386,213 @@ async function handleApi(request, env) {
     return ok();
   }
 
+// ── 购物车：想一起做的事 ────────────────────────────────
+const FOOD_POOL = ['burger', 'fries', 'cola', 'pizza', 'roastChicken', 'cake', 'cupcake', 'croissant', 'bubbleTea', 'lollipop'];
+const DAY = 86400000;
+
+function petView(db, user, now = Date.now()) {
+  const pet = db.pet;
+  const stage = PET_STAGES[pet.stage] || PET_STAGES[0];
+  const start = pet.stageStartedAt ? new Date(pet.stageStartedAt).getTime() : now;
+  const elapsed = Math.max(0, now - start);
+  const total = stage.days * DAY;
+  const careOk = ['water', 'weed', 'feed'].every((k) => (pet.care[k] || 0) >= stage.need[k]);
+  return {
+    status: pet.status,
+    stageIndex: pet.stage,
+    stage: { key: stage.key, name: stage.name, days: stage.days, need: stage.need },
+    stageCount: PET_STAGES.length,
+    care: pet.care,
+    careOk,
+    timeOk: elapsed >= total,
+    canAdvance: pet.status === 'growing' && elapsed >= total && careOk,
+    progress: Math.min(1, elapsed / total),
+    daysLeft: Math.max(0, Math.ceil((total - elapsed) / DAY)),
+    hoursLeft: Math.max(0, Math.ceil((total - elapsed) / 3600000)),
+    myConsent: Boolean(pet.consent[user.id]),
+    consent: Object.keys(pet.consent),
+    messages: (pet.messages || []).slice(-30),
+    foods: pet.foods || {},
+    wishes: (pet.wishes || []).slice().reverse(),
+    pending: pet.pending,
+    cycles: pet.cycles || 0,
+  };
+}
+
+function petTick(db, now = Date.now()) {
+  const pet = db.pet;
+  let changed = false;
+  while (pet.status === 'growing') {
+    const stage = PET_STAGES[pet.stage];
+    if (!stage) break;
+    const start = pet.stageStartedAt ? new Date(pet.stageStartedAt).getTime() : now;
+    const due = now - start >= stage.days * DAY;
+    const cared = ['water', 'weed', 'feed'].every((k) => (pet.care[k] || 0) >= stage.need[k]);
+    if (!due || !cared) break;
+    if (pet.stage < PET_STAGES.length - 1) {
+      pet.stage += 1;
+      pet.stageStartedAt = new Date(now).toISOString();
+      pet.care = { water: 0, weed: 0, feed: 0 };
+    } else {
+      pet.status = 'ready';
+      pet.pending = { foodId: FOOD_POOL[Math.floor(Math.random() * FOOD_POOL.length)], at: new Date(now).toISOString() };
+      pet.cycles = (pet.cycles || 0) + 1;
+    }
+    changed = true;
+  }
+  return changed;
+}
+
+async function handleCartApi(request, env, path, method, user) {
+  if (path === '/api/cart' && method === 'GET') {
+    const db = await read(env);
+    return ok({ cart: db.cart });
+  }
+  if (path === '/api/cart' && method === 'POST') {
+    const body = await request.json().catch(() => ({}));
+    const value = text(body.text, 120);
+    if (!value) return bad(400, '想做的事得写一句');
+    const item = await mutate(env, (db) => {
+      const c = {
+        id: newId(), text: value, note: text(body.note, 200),
+        author: user.id, authorName: user.name, avatar: user.avatar,
+        createdAt: new Date().toISOString(), done: false, doneAt: null, doneBy: null,
+      };
+      db.cart.unshift(c);
+      return c;
+    });
+    return ok({ item });
+  }
+  const m = path.match(/^\/api\/cart\/([a-f0-9]{16})$/);
+  if (m && method === 'PUT') {
+    const body = await request.json().catch(() => ({}));
+    const updated = await mutate(env, (db) => {
+      const c = db.cart.find((x) => x.id === m[1]);
+      if (!c) return null;
+      if (body.done !== undefined) {
+        c.done = Boolean(body.done);
+        c.doneAt = c.done ? new Date().toISOString() : null;
+        c.doneBy = c.done ? user.name : null;
+      }
+      if (body.text !== undefined) c.text = text(body.text, 120) || c.text;
+      if (body.note !== undefined) c.note = text(body.note, 200);
+      return c;
+    });
+    if (!updated) return bad(404, '这条不见了');
+    return ok({ item: updated });
+  }
+  if (m && method === 'DELETE') {
+    await mutate(env, (db) => {
+      db.cart = db.cart.filter((x) => x.id !== m[1]);
+    });
+    return ok();
+  }
+  return null;
+}
+
+async function handlePetApi(request, env, path, method, user) {
+  if (path === '/api/pet' && method === 'GET') {
+    const changed = await mutate(env, (db) => petTick(db));
+    const db = await read(env);
+    return ok({ pet: petView(db, user), advanced: changed, accounts: accountList(env) });
+  }
+  if (path === '/api/pet/consent' && method === 'POST') {
+    const result = await mutate(env, (db) => {
+      const pet = db.pet;
+      if (pet.status === 'growing' || pet.status === 'ready') return { error: '已经在养啦' };
+      pet.consent[user.id] = new Date().toISOString();
+      const both = accounts(env).every((a) => pet.consent[a.id]);
+      if (both) {
+        pet.status = 'growing';
+        pet.stage = 0;
+        pet.stageStartedAt = new Date().toISOString();
+        pet.startedAt = pet.stageStartedAt;
+        pet.care = { water: 0, weed: 0, feed: 0 };
+        pet.consent = {};
+        pet.pending = null;
+        return { started: true };
+      }
+      return { started: false };
+    });
+    if (result.error) return bad(400, result.error);
+    const db = await read(env);
+    return ok({ started: result.started, pet: petView(db, user) });
+  }
+  if (path === '/api/pet/care' && method === 'POST') {
+    const body = await request.json().catch(() => ({}));
+    const kind = ['water', 'weed', 'feed'].includes(body.kind) ? body.kind : null;
+    if (!kind) return bad(400, '不知道要做什么');
+    const result = await mutate(env, (db) => {
+      const pet = db.pet;
+      if (pet.status !== 'growing') return { error: '现在没有在养' };
+      const stage = PET_STAGES[pet.stage];
+      if (pet.care[kind] >= stage.need[kind]) return { error: '这一项已经做够啦' };
+      pet.care[kind] += 1;
+      pet.lastCareAt = new Date().toISOString();
+      return { ok: true };
+    });
+    if (result.error) return bad(400, result.error);
+    await mutate(env, (db) => petTick(db));
+    const db = await read(env);
+    return ok({ pet: petView(db, user) });
+  }
+  if (path === '/api/pet/talk' && method === 'POST') {
+    const body = await request.json().catch(() => ({}));
+    const value = text(body.text, 300);
+    if (!value) return bad(400, '说点什么吧');
+    const message = await mutate(env, (db) => {
+      const m = { id: newId(), text: value, author: user.id, authorName: user.name, avatar: user.avatar, createdAt: new Date().toISOString(), seenBy: [] };
+      db.pet.messages = [...(db.pet.messages || []), m].slice(-60);
+      return m;
+    });
+    return ok({ message });
+  }
+  if (path === '/api/pet/talk/seen' && method === 'POST') {
+    await mutate(env, (db) => {
+      for (const m of db.pet.messages || []) {
+        if (m.author === user.id) continue;
+        if (!m.seenBy) m.seenBy = [];
+        if (!m.seenBy.includes(user.id)) m.seenBy.push(user.id);
+      }
+    });
+    return ok();
+  }
+  if (path === '/api/pet/open' && method === 'POST') {
+    const foodId = await mutate(env, (db) => {
+      const pet = db.pet;
+      if (pet.status !== 'ready' || !pet.pending) return null;
+      const id = pet.pending.foodId;
+      pet.foods[id] = (pet.foods[id] || 0) + 1;
+      pet.pending = null;
+      pet.status = 'idle';
+      pet.stage = 0;
+      pet.stageStartedAt = null;
+      return id;
+    });
+    if (!foodId) return bad(400, '还没有可以打开的箱子');
+    const db = await read(env);
+    return ok({ foodId, pet: petView(db, user) });
+  }
+  if (path === '/api/pet/wish' && method === 'POST') {
+    const body = await request.json().catch(() => ({}));
+    const value = text(body.text, 120);
+    if (!value) return bad(400, '愿望得写一句');
+    const result = await mutate(env, (db) => {
+      const pet = db.pet;
+      const owned = Object.entries(pet.foods || {}).filter(([, n]) => n > 0);
+      if (!owned.length) return { error: '还没有攒到吃的，先用一个再来许愿' };
+      const [foodId] = body.foodId && (pet.foods[body.foodId] || 0) > 0 ? [body.foodId] : owned.sort((a, b) => b[1] - a[1])[0];
+      pet.foods[foodId] -= 1;
+      const wish = { id: newId(), text: value, foodId, from: user.id, fromName: user.name, createdAt: new Date().toISOString() };
+      pet.wishes = [...(pet.wishes || []), wish].slice(-50);
+      return wish;
+    });
+    if (result.error) return bad(400, result.error);
+    const db = await read(env);
+    return ok({ wish: result, pet: petView(db, user) });
+  }
+  return null;
+}
   if (method === 'POST' && path === '/api/uploads/presign') return handlePresign(request, env);
 
   return bad(404, '没有这个接口');

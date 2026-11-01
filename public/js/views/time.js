@@ -41,7 +41,6 @@ export async function render(root, ctx) {
   root.innerHTML = `
     ${viewHead({
       title: '恋爱时间',
-      sub: `从 ${formatDate(started, { withWeekday: true })}开始算。这个日子随时可以改。`,
       actions: `<button class="btn" data-edit>${icon('plus', { size: 12 })}改一改</button>`,
     })}
     <div class="stack">

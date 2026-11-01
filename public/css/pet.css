@@ -1,0 +1,484 @@
+/* 购物车 + 培养系统 */
+
+/* ── 购物车 ─────────────────────────────────────────── */
+.cart-bar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    'num bar'
+    'note note';
+  align-items: center;
+  gap: 10px var(--sp-4);
+}
+
+.cart-bar-main {
+  grid-area: num;
+}
+
+.cart-progress {
+  grid-area: bar;
+}
+
+.cart-bar .card-note {
+  grid-area: note;
+}
+
+.cart-bar-main {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.cart-big {
+  font-family: var(--font-pixel);
+  font-size: var(--fs-pixel-l);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.cart-label {
+  font-size: var(--fs-sub);
+  color: var(--ink-2);
+}
+
+.cart-progress {
+  height: 10px;
+}
+
+.cart-list {
+  display: grid;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cart-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  border: var(--px) solid var(--line);
+  background: var(--paper);
+}
+
+.cart-item.is-done {
+  background: var(--paper-2);
+  border-color: var(--line-soft);
+}
+
+.cart-check {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  margin-top: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: var(--px) solid var(--line);
+  background: var(--paper);
+  cursor: pointer;
+  color: var(--accent);
+}
+
+.cart-item.is-done .cart-check {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
+
+.cart-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.cart-text {
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+
+.cart-item.is-done .cart-text {
+  text-decoration: line-through;
+  color: var(--ink-3);
+}
+
+.cart-note {
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+
+.cart-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  font-family: var(--font-pixel);
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.cart-avatar {
+  height: 20px;
+  width: auto;
+  image-rendering: pixelated;
+}
+
+/* ── 培养 ───────────────────────────────────────────── */
+.pet-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: var(--sp-4);
+  align-items: start;
+}
+
+.pet-stage {
+  display: grid;
+  gap: var(--sp-3);
+  justify-items: center;
+  text-align: center;
+  padding: var(--sp-5) var(--sp-4) var(--sp-4);
+}
+
+.pet-scene {
+  width: 100%;
+  display: grid;
+  place-items: center;
+  padding: var(--sp-4) 0 var(--sp-3);
+  background-color: var(--paper-2);
+  border: var(--px) solid var(--line-soft);
+}
+
+.pet-scene.is-egg {
+  background-color: color-mix(in srgb, var(--gold-soft) 45%, var(--paper-2));
+}
+
+.pet-scene.is-ready {
+  background-color: color-mix(in srgb, var(--rose-soft) 55%, var(--paper-2));
+}
+
+.pet-scene.is-open {
+  background-color: color-mix(in srgb, var(--rose-soft) 70%, var(--paper-2));
+}
+
+.px-art,
+.pet-art {
+  image-rendering: pixelated;
+  display: block;
+  filter: drop-shadow(0 6px 0 rgba(43, 36, 54, 0.12));
+}
+
+.pet-title {
+  font-family: var(--font-pixel);
+  font-size: var(--fs-pixel-m);
+  line-height: 1.2;
+}
+
+.pet-sub {
+  font-size: var(--fs-sub);
+  color: var(--ink-2);
+  max-width: 44ch;
+}
+
+.pet-sub b {
+  color: var(--ink);
+}
+
+.pet-stage-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.pet-tip {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.pet-actions {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.pet-stage .mile-top,
+.pet-stage .mile-bar {
+  width: 100%;
+}
+
+.pet-care {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--sp-2);
+  width: 100%;
+  margin-top: var(--sp-2);
+}
+
+.care-btn {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border: var(--px) solid var(--line);
+  background: var(--paper);
+  box-shadow: 2px 2px 0 var(--shadow-hard);
+  cursor: pointer;
+  text-align: left;
+  color: var(--ink);
+}
+
+.care-btn:hover:not(:disabled) {
+  background: var(--paper-2);
+}
+
+.care-btn:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+
+.care-btn:disabled {
+  cursor: default;
+  box-shadow: none;
+  background: var(--paper-2);
+  color: var(--ink-3);
+}
+
+.care-btn.is-done {
+  border-color: var(--accent);
+  background: var(--rose-soft);
+  color: var(--ink);
+}
+
+.care-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.care-name {
+  font-family: var(--font-pixel);
+  font-size: 12px;
+}
+
+.care-count {
+  font-family: var(--font-pixel);
+  font-size: 20px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.care-of {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.care-bar {
+  display: block;
+  height: 6px;
+  background: var(--paper-3);
+  border: 1px solid var(--line-soft);
+  overflow: hidden;
+}
+
+.care-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+.consent-list {
+  display: grid;
+  gap: var(--sp-2);
+  margin: var(--sp-2) 0 0;
+  padding: 0;
+  list-style: none;
+  width: min(420px, 100%);
+}
+
+.consent-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 10px 12px;
+  border: var(--px) solid var(--line-soft);
+  background: var(--paper);
+}
+
+.consent-row.is-ok {
+  border-color: var(--accent);
+  background: var(--rose-soft);
+}
+
+.consent-who {
+  font-family: var(--font-pixel);
+  font-size: 12px;
+}
+
+.consent-state {
+  flex: 1;
+  text-align: left;
+  font-size: var(--fs-sub);
+  color: var(--ink-2);
+}
+
+/* 说给它听 */
+.talk-form {
+  display: flex;
+  gap: var(--sp-2);
+  margin: var(--sp-2) 0 0;
+}
+
+.talk-form .input {
+  flex: 1;
+}
+
+.talk-list {
+  display: grid;
+  gap: var(--sp-2);
+  margin: var(--sp-3) 0 0;
+  padding: 0;
+  list-style: none;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.talk-item {
+  display: flex;
+}
+
+.talk-item.is-mine {
+  justify-content: flex-end;
+}
+
+.talk-bubble {
+  max-width: 86%;
+  padding: 8px 10px;
+  border: var(--px) solid var(--line);
+  background: var(--paper);
+}
+
+.talk-item.is-mine .talk-bubble {
+  background: color-mix(in srgb, var(--gold-soft) 50%, var(--paper));
+}
+
+.talk-text {
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.talk-meta {
+  margin-top: 4px;
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+/* 零食柜 */
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+}
+
+.shop-item {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+  border: var(--px) solid var(--line-soft);
+  background: var(--paper);
+}
+
+.shop-name {
+  font-family: var(--font-pixel);
+  font-size: 11px;
+}
+
+.shop-count {
+  font-family: var(--font-pixel);
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.wish-list {
+  display: grid;
+  gap: var(--sp-2);
+  margin: var(--sp-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wish-item {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: flex-start;
+  padding: var(--sp-2) 0;
+  border-bottom: 2px solid var(--line-soft);
+}
+
+.wish-item:last-child {
+  border-bottom: none;
+}
+
+.wish-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.wish-text {
+  display: block;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.wish-meta {
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+@media (max-width: 1100px) {
+  .pet-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .cart-bar {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: var(--sp-2) var(--sp-3);
+  }
+
+  .cart-bar .card-note {
+    grid-column: 1 / -1;
+  }
+
+  .pet-stage {
+    padding: var(--sp-3);
+  }
+
+  .pet-care {
+    gap: 6px;
+  }
+
+  .care-btn {
+    padding: 8px;
+  }
+
+  .care-count {
+    font-size: 18px;
+  }
+
+  .shop-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .talk-form .btn {
+    padding: 8px 10px;
+  }
+}

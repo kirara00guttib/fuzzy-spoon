@@ -21,8 +21,29 @@ export function defaults() {
     photos: [],
     events: [],
     tracks: [],
+    cart: [],
+    pet: {
+      status: 'idle',
+      stage: 0,
+      consent: {},
+      startedAt: null,
+      stageStartedAt: null,
+      care: { water: 0, weed: 0, feed: 0 },
+      messages: [],
+      foods: {},
+      wishes: [],
+      pending: null,
+      cycles: 0,
+    },
   };
 }
+
+/** 三个培养阶段：每个阶段一周，照顾次数够了才能长大 */
+export const PET_STAGES = [
+  { key: 'egg', name: '鸡蛋', days: 7, need: { water: 6, weed: 2, feed: 2 } },
+  { key: 'seed', name: '种子', days: 7, need: { water: 6, weed: 3, feed: 3 } },
+  { key: 'box', name: '小箱子', days: 7, need: { water: 4, weed: 2, feed: 4 } },
+];
 
 function normalize(raw) {
   const base = defaults();
@@ -36,6 +57,8 @@ function normalize(raw) {
     photos: Array.isArray(raw.photos) ? raw.photos : [],
     events: Array.isArray(raw.events) ? raw.events : [],
     tracks: Array.isArray(raw.tracks) ? raw.tracks : [],
+    cart: Array.isArray(raw.cart) ? raw.cart : [],
+    pet: { ...base.pet, ...(raw.pet || {}) },
   };
 }
 
