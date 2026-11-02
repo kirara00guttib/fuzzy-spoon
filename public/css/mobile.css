@@ -8,7 +8,7 @@
 
 @media (max-width: 900px) {
   :root {
-    --band: 74px;
+    --band: 88px;
     --inset: 0px;
     --fs-pixel-l: 24px;
     --fs-pixel-xl: 36px;
@@ -27,22 +27,50 @@
 
   /* ── 外壳 ─────────────────────────────────────── */
   .app {
-    /* 四周留白：让背景露出来，整页像一页纸浮在世界里 */
+    /* 四周留白：书浮在世界上，四周都能看见背景 */
     position: fixed;
-    inset: 9px;
+    inset: 10px 10px 0;
     display: grid;
-    border: var(--px) solid var(--line);
-    box-shadow: 3px 3px 0 rgba(20, 15, 28, 0.2);
-    overflow: hidden;
     grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-rows: 44px minmax(0, 1fr) var(--band) auto;
+    grid-template-rows: 44px minmax(0, 1fr) auto var(--band);
     grid-template-areas:
       'brand foot'
       'canvas canvas'
-      'band band'
-      'nav nav';
-    padding: 0;
+      'nav nav'
+      'band band';
+    padding: 12px 12px 0;
     background: transparent;
+    border: none;
+    box-shadow: none;
+    overflow: visible;
+  }
+
+  /* 书：玫瑰色封面 + 米色纸页，只有上面三行是"书"，底下那条是世界 */
+  .app::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: var(--band);
+    z-index: -1;
+    background: var(--paper);
+    border: 7px solid var(--cover);
+    box-shadow: 0 0 0 2px var(--line), 4px 6px 0 rgba(20, 15, 28, 0.22);
+  }
+
+  /* 书脊：封面左边一条更深的边，三针线装 */
+  .app::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: var(--band);
+    width: 7px;
+    z-index: -1;
+    background-color: var(--cover-edge);
+    background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='7' height='88'%3E%3Crect x='2' y='38' width='3' height='3' fill='%23f5ead6'/%3E%3Crect x='2' y='44' width='3' height='3' fill='%23f5ead6'/%3E%3Crect x='2' y='50' width='3' height='3' fill='%23f5ead6'/%3E%3C/svg%3E");
+    background-repeat: repeat-y;
   }
 
   .sheet,
@@ -160,22 +188,8 @@
     align-items: flex-end;
     pointer-events: none;
     /* 用像素抖动把「画面」和「纸面」缝起来，不要一条硬边 */
-    --dither: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6'%3E%3Crect width='3' height='3' fill='white'/%3E%3Crect x='3' y='3' width='3' height='3' fill='white'/%3E%3C/svg%3E");
   }
 
-  .band::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    height: 8px;
-    background: var(--paper);
-    -webkit-mask-image: var(--dither);
-    mask-image: var(--dither);
-    -webkit-mask-size: 6px 6px;
-    mask-size: 6px 6px;
-    pointer-events: none;
-  }
 
   .band::before {
     top: 0;
@@ -232,7 +246,7 @@
     flex-direction: row;
     gap: 0;
     overflow: visible;
-    padding: 2px 2px calc(6px + env(safe-area-inset-bottom));
+    padding: 2px 2px calc(8px + env(safe-area-inset-bottom));
     background: var(--paper);
     border-top: var(--px) solid var(--line);
     border-right: none;

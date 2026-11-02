@@ -14,32 +14,17 @@ export async function render(root, ctx) {
     toast(err.message, 'err');
   }
 
-  const storageLabel =
-    storage === 'r2'
-      ? 'Cloudflare R2 · 预签名直传'
-      : storage === 'unconfigured'
-        ? '云端存储还没配置 R2，见 DEPLOY.md 第二步'
-        : '本机存储 · 配好 R2 自动切换';
-
-  root.innerHTML = `
+    root.innerHTML = `
     ${viewHead({
       title: '照片墙',
-      sub: '上传时浏览器只拿到一条 10 分钟后失效的链接，密钥一直在你自己的机器上。',
       actions: `<button class="btn btn-primary" data-upload>${icon('upload', { size: 12 })}上传照片</button>`,
     })}
-    <div class="gallery-toolbar">
-      <span class="storage-badge">${icon('picture', { size: 12 })}${esc(storageLabel)}</span>
-      <span class="card-note" data-count>${photos.length} 张</span>
-      <span class="card-note">· 也可以直接把照片拖进来</span>
-    </div>
     <input type="file" accept="image/*" multiple hidden data-input>
     ${
       photos.length
-        ? `<div class="tile-grid" data-grid>${photos.map(tile).join('')}</div>
-           <p class="drop-hint" style="margin-top:16px">松手就上传 · jpg / png / webp / avif / gif</p>`
+        ? `<div class="tile-grid" data-grid>${photos.map(tile).join('')}</div>`
         : emptyState({
             title: '照片墙还是空的',
-            text: '把照片拖到这个页面里，或者点右上角「上传照片」。jpg / png / webp / avif / gif 都行。',
             action: `<button class="btn btn-primary" data-upload>${icon('upload', { size: 12 })}选几张照片</button>`,
           })
     }`;

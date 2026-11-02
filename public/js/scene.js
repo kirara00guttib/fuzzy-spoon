@@ -177,13 +177,9 @@ export function createWorld(canvas, { onTick } = {}) {
     return mix(pal.hillFar, color, clamp(pal.light * 1.05, 0.08, 1));
   }
 
-  /** 手机上有底部标签栏，小动物要站在它上方那条「世界带」里 */
+  /** 手机上标签栏在"书"里面，小动物就站在书外面的地面上（屏幕底部那条） */
   function bottomChrome() {
-    if (!window.matchMedia('(max-width: 900px)').matches) return 0;
-    const nav = document.querySelector('.nav');
-    if (!nav) return 0;
-    const rect = nav.getBoundingClientRect();
-    return rect.height > 0 ? rect.height : 0;
+    return 0;
   }
 
   function computeAnchors() {
