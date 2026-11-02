@@ -595,3 +595,23 @@
     font-size: 12px;
   }
 }
+
+/* ── 手机：书页半透明，能看见背后的风景 ───────────────── */
+@media (max-width: 900px) {
+  .app::before {
+    background: var(--glass);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+  }
+
+  .brand,
+  .rail-foot,
+  .nav {
+    background: transparent;
+  }
+
+  .head-play,
+  .pocket-btn {
+    background: var(--glass-strong);
+  }
+}

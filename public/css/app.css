@@ -940,3 +940,65 @@ a {
   }
 }
 
+/* ── 半透明纸：书页透出背后的风景 ─────────────────────── */
+:root {
+  /* 页纸：天光、山影和夜色都能透上来 */
+  --glass: rgba(251, 244, 230, 0.64);
+  --glass-2: rgba(246, 235, 215, 0.56);
+  /* 卡片：字压在更实的纸上，读起来不吃力 */
+  --glass-soft: rgba(252, 246, 234, 0.8);
+  --glass-strong: rgba(252, 247, 236, 0.95);
+  --glass-blur: blur(2.5px) saturate(1.1);
+}
+
+.sheet {
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+
+.rail {
+  background: var(--glass-2);
+}
+
+.brand,
+.rail-foot {
+  background: transparent;
+}
+
+.card {
+  background: var(--glass-soft);
+}
+
+.nav-item[aria-current='page'] {
+  background: var(--glass-strong);
+}
+
+.login-card {
+  background: var(--glass-strong);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+
+.modal {
+  background: rgba(251, 244, 230, 0.96);
+}
+
+.pocket,
+.toast {
+  background: var(--glass-strong);
+}
+
+.input,
+.textarea,
+.select {
+  background: rgba(251, 244, 230, 0.88);
+}
+
+.btn {
+  background: rgba(252, 247, 236, 0.94);
+}
+
+.btn:hover {
+  background: rgba(246, 235, 215, 0.97);
+}
