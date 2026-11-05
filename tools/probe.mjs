@@ -31,6 +31,9 @@ if (!EDGE) {
 }
 
 const profile = path.join(process.env.TEMP || '.', `edge-probe-${port}`);
+const extraFlags = args.includes('--fake-mic')
+  ? ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream', '--autoplay-policy=no-user-gesture-required']
+  : [];
 const child = spawn(
   EDGE,
   [
@@ -41,6 +44,7 @@ const child = spawn(
     '--disable-extensions',
     '--hide-scrollbars',
     '--mute-audio',
+    ...extraFlags,
     `--remote-debugging-port=${port}`,
     `--user-data-dir=${profile}`,
     `--window-size=${width},${height}`,

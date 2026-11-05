@@ -71,7 +71,7 @@ export const api = {
 
   notes: {
     list: () => request('/api/notes'),
-    add: (text) => request('/api/notes', { method: 'POST', body: { text } }),
+    add: (text, audio = null) => request('/api/notes', { method: 'POST', body: { text, audio } }),
     remove: (id) => request(`/api/notes/${id}`, { method: 'DELETE' }),
   },
   moments: {
@@ -129,6 +129,25 @@ export const api = {
     });
     return out.photo;
   },
+  /** 悄悄话录音：同样先要预签名 PUT 链接，再把 blob 直传过去 */
+  async uploadAudio(blob, seconds = 0) {
+    const mime = (blob.type || 'audio/webm').split(';')[0].trim() || 'audio/webm';
+    const presign = await request('/api/uploads/presign', {
+      method: 'POST',
+      body: { contentType: mime },
+    });
+    const put = await fetch(presign.uploadUrl, {
+      method: presign.method || 'PUT',
+      headers: presign.headers,
+      body: blob,
+      credentials: presign.mode === 'local' ? 'same-origin' : 'omit',
+    });
+    if (!put.ok) {
+      throw new Error(presign.mode === 'r2' ? '上传到 R2 失败（检查桶的 CORS 设置）' : '上传录音失败');
+    }
+    return { key: presign.key, mime, seconds, size: blob.size };
+  },
+
   // 购物车：想一起做的事
   cart: {
     list: () => request('/api/cart'),

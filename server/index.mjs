@@ -28,13 +28,20 @@ const MIME = {
   '.ico': 'image/x-icon',
   '.woff2': 'font/woff2',
   '.mp3': 'audio/mpeg',
+  '.m4a': 'audio/mp4',
+  '.webm': 'audio/webm',
+  '.ogg': 'audio/ogg',
+  '.aac': 'audio/aac',
+  '.wav': 'audio/wav',
   '.mp4': 'video/mp4',
   '.txt': 'text/plain; charset=utf-8',
 };
 
 const MAX_JSON = 256 * 1024;
 const MAX_UPLOAD = 15 * 1024 * 1024;
+const MAX_AUDIO = 24 * 1024 * 1024;
 const PHOTO_PREFIX = 'photos/';
+const AUDIO_PREFIX = 'audio/';
 
 // ── 小工具 ─────────────────────────────────────────────
 function baseHeaders(extra = {}) {
@@ -101,9 +108,9 @@ const int = (v, min, max) => {
 
 function safeKey(key) {
   const k = String(key || '');
-  if (!k.startsWith(PHOTO_PREFIX)) return null;
+  if (!k.startsWith(PHOTO_PREFIX) && !k.startsWith(AUDIO_PREFIX)) return null;
   if (k.includes('..') || k.includes('//') || k.includes('\\')) return null;
-  if (!/^photos\/[a-z0-9/._-]+$/i.test(k)) return null;
+  if (!/^(photos|audio)\/[a-z0-9/._-]+$/i.test(k)) return null;
   return k;
 }
 
@@ -122,6 +129,26 @@ function mediaUrl(key) {
 
 function publicPhoto(p) {
   return { ...p, url: mediaUrl(p.key) };
+}
+
+// 悄悄话里的录音：只把地址给出去，key 不直接暴露
+function publicNote(n) {
+  return {
+    ...n,
+    audioUrl: n.audio && n.audio.key ? mediaUrl(n.audio.key) : null,
+  };
+}
+
+function audioMeta(v) {
+  if (!v || typeof v !== 'object') return null;
+  const key = safeKey(v.key);
+  if (!key || !key.startsWith(AUDIO_PREFIX)) return null;
+  return {
+    key,
+    mime: text(v.mime, 60) || 'audio/webm',
+    seconds: int(v.seconds, 0, 900) ?? 0,
+    size: int(v.size, 0, MAX_AUDIO) ?? 0,
+  };
 }
 
 function publicMoment(m, photos) {
@@ -217,17 +244,20 @@ on('PUT', /^\/api\/settings$/, async (req, res) => {
 // 悄悄话
 on('GET', /^\/api\/notes$/, async (req, res) => {
   const db = store.read();
-  ok(res, { notes: db.notes });
+  ok(res, { notes: db.notes.map(publicNote) });
 });
 
 on('POST', /^\/api\/notes$/, async (req, res) => {
   const body = await readJSON(req);
   const value = text(body.text, 600);
-  if (!value) return bad(res, 400, '写点什么吧');
+  const audio = audioMeta(body.audio);
+  if (body.audio && !audio) return bad(res, 400, '录音地址不合法');
+  if (!value && !audio) return bad(res, 400, '写点什么，或者录一段吧');
   const note = await store.mutate((db) => {
     const n = {
       id: store.newId(),
       text: value,
+      audio,
       author: req.user.id,
       authorName: req.user.name,
       avatar: req.user.avatar,
@@ -237,13 +267,19 @@ on('POST', /^\/api\/notes$/, async (req, res) => {
     db.notes = db.notes.slice(0, 500);
     return n;
   });
-  ok(res, { note });
+  ok(res, { note: publicNote(note) });
 });
 
 on('DELETE', /^\/api\/notes\/([a-f0-9]{16})$/, async (req, res, m) => {
-  await store.mutate((db) => {
-    db.notes = db.notes.filter((n) => n.id !== m[1]);
+  const removed = await store.mutate((db) => {
+    const n = db.notes.find((x) => x.id === m[1]) || null;
+    db.notes = db.notes.filter((x) => x.id !== m[1]);
+    return n;
   });
+  if (removed && removed.audio && removed.audio.key) {
+    urlCache.delete(removed.audio.key);
+    await deleteObject(removed.audio.key);
+  }
   ok(res);
 });
 
@@ -646,17 +682,34 @@ on('POST', /^\/api\/pet\/wish$/, async (req, res) => {
 });
 
 // 预签名上传
+const IMAGE_EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/avif': 'avif', 'image/gif': 'gif' };
+const AUDIO_EXT = {
+  'audio/webm': 'webm',
+  'audio/ogg': 'ogg',
+  'audio/mp4': 'm4a',
+  'audio/x-m4a': 'm4a',
+  'audio/mpeg': 'mp3',
+  'audio/aac': 'aac',
+  'audio/wav': 'wav',
+  'audio/x-wav': 'wav',
+};
+
 on('POST', /^\/api\/uploads\/presign$/, async (req, res) => {
   const body = await readJSON(req);
-  const type = text(body.contentType, 80) || 'image/jpeg';
-  if (!/^image\/(jpeg|png|webp|avif|gif)$/i.test(type)) return bad(res, 400, '只收 jpg / png / webp / avif / gif');
-  const ext = ({ 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/avif': 'avif', 'image/gif': 'gif' })[type.toLowerCase()] || 'jpg';
+  const type = (text(body.contentType, 80) || 'image/jpeg').split(';')[0].trim().toLowerCase();
+  const isAudio = type.startsWith('audio/');
+  const ext = (isAudio ? AUDIO_EXT : IMAGE_EXT)[type];
+  if (!ext) {
+    return bad(res, 400, isAudio ? '只收 webm / m4a / mp3 / ogg / wav 的录音' : '只收 jpg / png / webp / avif / gif');
+  }
   const now = new Date();
-  const key = `${PHOTO_PREFIX}${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${crypto.randomUUID()}.${ext}`;
+  const dir = isAudio ? AUDIO_PREFIX : PHOTO_PREFIX;
+  const key = `${dir}${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${crypto.randomUUID()}.${ext}`;
 
   if (!r2Ready()) {
     return ok(res, {
       mode: 'local',
+      kind: isAudio ? 'audio' : 'image',
       key,
       method: 'PUT',
       headers: { 'Content-Type': type },
@@ -667,6 +720,7 @@ on('POST', /^\/api\/uploads\/presign$/, async (req, res) => {
   const signed = presignPut(key, type);
   ok(res, {
     mode: 'r2',
+    kind: isAudio ? 'audio' : 'image',
     key,
     method: 'PUT',
     headers: { 'Content-Type': type },
@@ -679,8 +733,10 @@ on('POST', /^\/api\/uploads\/presign$/, async (req, res) => {
 on('PUT', /^\/api\/media\/(.+)$/, async (req, res, match) => {
   if (r2Ready()) return bad(res, 404, '照片存在 R2 里');
   const key = decodeURIComponent(match[1]);
-  if (!safeKey(key)) return bad(res, 400, '图片地址不合法');
-  const type = String(req.headers['content-type'] || '');
+  if (!safeKey(key)) return bad(res, 400, '地址不合法');
+  const type = String(req.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
+  const isAudio = /^audio\//.test(type);
+  const limit = isAudio ? MAX_AUDIO : MAX_UPLOAD;
   const target = path.join(UPLOAD_DIR, key);
   await fsp.mkdir(path.dirname(target), { recursive: true });
   let size = 0;
@@ -690,14 +746,15 @@ on('PUT', /^\/api\/media\/(.+)$/, async (req, res, match) => {
     await new Promise((resolve, reject) => {
       req.on('data', (chunk) => {
         size += chunk.length;
-        if (size > MAX_UPLOAD) reject(Object.assign(new Error('图片太大了'), { status: 413 }));
+        if (size > limit) reject(Object.assign(new Error(isAudio ? '录音太长了' : '图片太大了'), { status: 413 }));
       });
       req.pipe(out);
       out.on('finish', resolve);
       out.on('error', reject);
       req.on('error', reject);
     });
-    if (!/^image\//i.test(type)) throw Object.assign(new Error('只收图片'), { status: 400 });
+    if (!isAudio && !/^image\//i.test(type)) throw Object.assign(new Error('只收图片或录音'), { status: 400 });
+    if (isAudio && !AUDIO_EXT[type]) throw Object.assign(new Error('这种录音格式不认'), { status: 400 });
     await fsp.rename(tmp, target);
   } catch (err) {
     out.destroy();
@@ -710,17 +767,45 @@ on('PUT', /^\/api\/media\/(.+)$/, async (req, res, match) => {
 on('GET', /^\/api\/media\/(.+)$/, async (req, res, match) => {
   if (r2Ready()) return bad(res, 404, '照片存在 R2 里');
   const key = decodeURIComponent(match[1]);
-  if (!safeKey(key)) return bad(res, 400, '图片地址不合法');
+  if (!safeKey(key)) return bad(res, 400, '地址不合法');
   const target = path.join(UPLOAD_DIR, key);
   let stat;
   try {
     stat = await fsp.stat(target);
   } catch {
-    return bad(res, 404, '照片不见了');
+    return bad(res, 404, '这个文件不见了');
   }
+  const type = MIME[path.extname(target).toLowerCase()] || 'application/octet-stream';
+  const total = stat.size;
+
+  // 录音要支持 Range，不然手机上拖进度条会跳回去
+  const range = /^bytes=(\d*)-(\d*)$/.exec(String(req.headers.range || ''));
+  if (range) {
+    let start = range[1] ? Number(range[1]) : 0;
+    let end = range[2] ? Number(range[2]) : total - 1;
+    if (!range[1] && range[2]) {
+      start = Math.max(0, total - Number(range[2]));
+      end = total - 1;
+    }
+    if (!Number.isFinite(start) || !Number.isFinite(end) || start >= total || start > end) {
+      res.writeHead(416, baseHeaders({ 'Content-Range': `bytes */${total}` }));
+      return res.end();
+    }
+    end = Math.min(end, total - 1);
+    res.writeHead(206, baseHeaders({
+      'Content-Type': type,
+      'Content-Length': end - start + 1,
+      'Content-Range': `bytes ${start}-${end}/${total}`,
+      'Accept-Ranges': 'bytes',
+      'Cache-Control': 'private, max-age=3600',
+    }));
+    return fs.createReadStream(target, { start, end }).pipe(res);
+  }
+
   res.writeHead(200, baseHeaders({
-    'Content-Type': MIME[path.extname(target).toLowerCase()] || 'application/octet-stream',
-    'Content-Length': stat.size,
+    'Content-Type': type,
+    'Content-Length': total,
+    'Accept-Ranges': 'bytes',
     'Cache-Control': 'private, max-age=3600',
   }));
   fs.createReadStream(target).pipe(res);
