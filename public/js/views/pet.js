@@ -38,7 +38,6 @@ export async function render(root, ctx) {
   root.innerHTML = `
     ${viewHead({
       title: '培养',
-      sub: '一起养一个小东西：一周一个阶段，浇水除草喂吃的，还能把话说给它听，它会替你带到对方那儿。',
       actions: '',
     })}
     <div class="pet-grid">
@@ -108,7 +107,6 @@ export async function render(root, ctx) {
     const partnerConsent = p.consent.some((id) => id !== ctx.user.id);
     return `<div class="pet-scene is-egg">${artImg(STAGE_ART.egg, 7, 'pet-art', '鸡蛋')}</div>
       <h2 class="pet-title">一只蛋在等你</h2>
-      <p class="pet-sub">双方都点头才会开始领养。一周一个阶段：<b>鸡蛋 → 种子 → 小箱子 → 打开收获</b>，中间记得浇水、除草、喂它吃东西。</p>
       <ul class="consent-list">
         <li class="consent-row${myConsent ? ' is-ok' : ''}">
           <span class="consent-who">我</span>

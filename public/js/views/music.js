@@ -39,7 +39,6 @@ export async function render(root, ctx) {
   root.innerHTML = `
     ${viewHead({
       title: '一起听歌',
-      sub: `${player.tracks.length} 首小曲都是在浏览器里现场合成的，会一直循环；想听原曲点「去音乐网站」。`,
       actions: `<button class="btn" data-add-link>${icon('plus', { size: 12 })}添加链接</button>`,
     })}
     <div class="stack">
@@ -48,7 +47,7 @@ export async function render(root, ctx) {
           <div class="cover">${CASSETTE}</div>
           <div class="player-info">
             <p class="player-title" data-title>${esc(state.track.title)}</p>
-            <p class="player-sub" data-sub>${esc(state.track.artist)} · ${esc(state.track.mood)} · 循环着放</p>
+            <p class="player-sub" data-sub>${esc(state.track.mood)} · 循环着放</p>
             <div class="player-controls">
               <button class="btn btn-icon" data-prev aria-label="上一首">${icon('prev', { size: 12 })}</button>
               <button class="btn btn-primary" data-play>${icon(state.playing ? 'pause' : 'play', { size: 12 })}<span data-play-label>${state.playing ? '暂停' : '播放'}</span></button>
@@ -114,7 +113,7 @@ export async function render(root, ctx) {
     playerCard.classList.toggle('is-playing', s.playing);
     playBtn.innerHTML = `${icon(s.playing ? 'pause' : 'play', { size: 12 })}<span data-play-label>${s.playing ? '暂停' : '播放'}</span>`;
     titleEl.textContent = s.track.title;
-    subEl.textContent = `${s.track.artist} · ${s.track.mood} · ${s.track.bpm} BPM`;
+    subEl.textContent = `${s.track.mood} · ${s.track.bpm} BPM`;
     loopBtn.textContent = s.loop ? '循环开' : '循环关';
     loopBtn.setAttribute('aria-pressed', String(s.loop));
     loopBtn.classList.toggle('btn-quiet', !s.loop);

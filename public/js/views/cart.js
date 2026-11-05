@@ -16,7 +16,6 @@ export async function render(root, ctx) {
   root.innerHTML = `
     ${viewHead({
       title: '购物车',
-      sub: '想一起做的事都先放进车里，做完了划掉。',
       actions: '',
     })}
     <div class="stack">

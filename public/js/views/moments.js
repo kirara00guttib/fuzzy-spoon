@@ -51,7 +51,6 @@ export async function render(root, ctx) {
   root.innerHTML = `
     ${viewHead({
       title: '日常分享',
-      sub: '今天吃了什么、路上看到什么、想放哪首歌给你听。',
       actions: `<button class="btn btn-primary" data-add>${icon('plus', { size: 12 })}记一笔</button>`,
     })}
     ${

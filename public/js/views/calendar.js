@@ -22,7 +22,6 @@ export async function render(root, ctx) {
   root.innerHTML = `
     ${viewHead({
       title: '日历',
-      sub: '节日、生日、我们一起走过的那一天，都会自己标出来。',
       actions: `<button class="btn" data-birthday>${icon('cake', { size: 12 })}生日设置</button>
                 <button class="btn btn-primary" data-add>${icon('plus', { size: 12 })}加一个日子</button>`,
     })}

@@ -995,10 +995,15 @@ a {
   background: rgba(251, 244, 230, 0.88);
 }
 
-.btn {
+/* 按钮保持原来那张小纸片，别盖掉 .btn-primary / .btn-quiet / .btn-danger 的底色 */
+.btn:not(.btn-primary):not(.btn-quiet):not(.btn-danger) {
   background: rgba(252, 247, 236, 0.94);
 }
 
-.btn:hover {
+.btn:not(.btn-primary):not(.btn-quiet):not(.btn-danger):hover {
   background: rgba(246, 235, 215, 0.97);
+}
+
+.btn-danger:hover {
+  background: rgba(232, 168, 178, 0.9);
 }

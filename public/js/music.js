@@ -1,4 +1,4 @@
-// 一起听歌：三首在浏览器里现场合成的小曲（不转存任何版权音乐），
+// 一起听歌：七首在浏览器里现场合成的小曲（不转存任何版权音乐），
 // 想听原曲就点「去音乐网站」，直接跳到网易云的搜索页。
 
 const NOTE_INDEX = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
@@ -21,7 +21,6 @@ export const TRACKS = [
     en: 'Afternoon Walk',
     mood: '轻松',
     bpm: 92,
-    artist: '我们的小合成器',
     search: SEARCH('午后散步 轻音乐'),
     melody: [
       null, 'C5', null, 'E5', null, 'G5', null, 'E5', null, 'A5', null, 'G5', null, 'E5', null, 'D5',
@@ -39,7 +38,6 @@ export const TRACKS = [
     en: 'Kitty March',
     mood: '俏皮',
     bpm: 124,
-    artist: '我们的小合成器',
     search: SEARCH('猫咪 进行曲 可爱 纯音乐'),
     melody: [
       'F5', null, 'A5', null, 'C6', null, 'A5', null, 'F5', null, 'G5', null, 'A5', null, null, null,
@@ -58,7 +56,6 @@ export const TRACKS = [
     en: 'Golden Nocturne',
     mood: '安静',
     bpm: 72,
-    artist: '我们的小合成器',
     search: SEARCH('小夜曲 温柔 钢琴 纯音乐'),
     melody: [
       null, null, 'A4', null, null, 'C5', null, null, null, 'E5', null, null, 'G5', null, null, null,
@@ -76,7 +73,6 @@ export const TRACKS = [
     en: 'Rainy Window',
     mood: '安静',
     bpm: 76,
-    artist: '我们的小合成器',
     search: SEARCH('雨声 安静 钢琴 纯音乐'),
     melody: [
       null, 'F#5', null, 'A5', null, 'D6', null, 'A5', null, 'F#5', null, 'E5', null, 'D5', null, null,
@@ -96,7 +92,6 @@ export const TRACKS = [
     en: 'Walk into Dusk',
     mood: '温暖',
     bpm: 88,
-    artist: '我们的小合成器',
     search: SEARCH('黄昏 散步 温暖 纯音乐'),
     melody: [
       null, 'A5', null, 'C6', null, 'A5', null, 'F5', null, 'G5', null, 'A5', null, 'C6', null, null,
@@ -116,7 +111,6 @@ export const TRACKS = [
     en: 'The First Day',
     mood: '心动',
     bpm: 66,
-    artist: '我们的小合成器',
     search: SEARCH('第一次见面 心动 钢琴 纯音乐'),
     melody: [
       'E5', null, null, 'G5', null, null, 'C6', null, null, 'B5', null, 'A5', null, 'G5', null, null,
@@ -136,7 +130,6 @@ export const TRACKS = [
     en: 'Paws on Keys',
     mood: '活泼',
     bpm: 132,
-    artist: '我们的小合成器',
     search: SEARCH('活泼 可爱 跳跃 纯音乐'),
     melody: [
       'C6', null, 'E6', null, 'G6', null, 'A6', null, 'G6', null, 'E6', null, 'D6', null, 'C6', null,

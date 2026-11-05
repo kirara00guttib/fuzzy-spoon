@@ -16,13 +16,11 @@ export async function render(root, ctx) {
   root.innerHTML = `
     ${viewHead({
       title: '悄悄话',
-      sub: '两个人的留言板。写下来的会带着日期一直留着。',
       actions: '',
     })}
     <div class="stack">
       <form class="card composer" data-form>
         <label class="field">
-          <span class="field-label">写给 ${esc(user.name === ctx.settings.herName ? ctx.settings.hisName : ctx.settings.herName)}，也写给以后的我们</span>
           <textarea class="textarea" name="text" maxlength="600" placeholder="今天想说的话…" required></textarea>
         </label>
         <div class="composer-foot">
