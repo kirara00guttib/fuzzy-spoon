@@ -270,17 +270,41 @@ on('POST', /^\/api\/notes$/, async (req, res) => {
   ok(res, { note: publicNote(note) });
 });
 
-on('DELETE', /^\/api\/notes\/([a-f0-9]{16})$/, async (req, res, m) => {
-  const removed = await store.mutate((db) => {
-    const n = db.notes.find((x) => x.id === m[1]) || null;
-    db.notes = db.notes.filter((x) => x.id !== m[1]);
+// 删悄悄话要两个人都点头：一人一次投票，凑齐才真删
+const ACCOUNT_IDS = ACCOUNTS.map((a) => a.id);
+const votesOf = (n) => (Array.isArray(n.deleteVotes) ? n.deleteVotes : []);
+
+on('POST', /^\/api\/notes\/([a-f0-9]{16})\/vote$/, async (req, res, m) => {
+  const result = await store.mutate((db) => {
+    const n = db.notes.find((x) => x.id === m[1]);
+    if (!n) return { missing: true };
+    const votes = new Set(votesOf(n));
+    votes.add(req.user.id);
+    n.deleteVotes = [...votes];
+    const everyone = ACCOUNT_IDS.every((id) => n.deleteVotes.includes(id));
+    if (everyone) {
+      db.notes = db.notes.filter((x) => x.id !== n.id);
+      return { removed: true, note: n };
+    }
+    return { removed: false, note: n };
+  });
+  if (result.missing) return bad(res, 404, '这句已经不在了');
+  if (result.removed && result.note.audio && result.note.audio.key) {
+    urlCache.delete(result.note.audio.key);
+    await deleteObject(result.note.audio.key);
+  }
+  ok(res, { removed: result.removed, note: publicNote(result.note) });
+});
+
+on('DELETE', /^\/api\/notes\/([a-f0-9]{16})\/vote$/, async (req, res, m) => {
+  const note = await store.mutate((db) => {
+    const n = db.notes.find((x) => x.id === m[1]);
+    if (!n) return null;
+    n.deleteVotes = votesOf(n).filter((id) => id !== req.user.id);
     return n;
   });
-  if (removed && removed.audio && removed.audio.key) {
-    urlCache.delete(removed.audio.key);
-    await deleteObject(removed.audio.key);
-  }
-  ok(res);
+  if (!note) return bad(res, 404, '这句已经不在了');
+  ok(res, { note: publicNote(note) });
 });
 
 // 照片

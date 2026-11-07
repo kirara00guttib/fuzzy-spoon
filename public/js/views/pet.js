@@ -119,7 +119,7 @@ export async function render(root, ctx) {
           ${partnerConsent ? icon('check', { size: 14 }) : '<span class="card-note">等 TA 点头</span>'}
         </li>
       </ul>
-      <p class="pet-tip">${p.cycles ? `你们已经养成了 ${p.cycles} 个。` : '养之前先说好，谁负责浇水。'}</p>`;
+      <p class="pet-tip">${p.cycles ? `你们已经养成了 ${p.cycles} 个。` : ''}</p>`;
   }
 
   // ── 说给它听 ─────────────────────────────────────────
@@ -135,7 +135,7 @@ export async function render(root, ctx) {
         </div>
       </li>`;
     }).join('');
-    return `<div class="card-head"><h2 class="card-title">说给它听</h2><span class="card-note">它会替你带给${esc(partnerName())}</span></div>
+    return `<div class="card-head"><h2 class="card-title">说给它听</h2></div>
       <form class="talk-form" data-talk-form>
         <input class="input" name="text" maxlength="300" placeholder="对着它说一句…" required>
         <button class="btn btn-primary" type="submit">${icon('talk', { size: 12 })}说</button>

@@ -72,7 +72,9 @@ export const api = {
   notes: {
     list: () => request('/api/notes'),
     add: (text, audio = null) => request('/api/notes', { method: 'POST', body: { text, audio } }),
-    remove: (id) => request(`/api/notes/${id}`, { method: 'DELETE' }),
+    // 删悄悄话要两个人都点头：先投一票，凑齐两人份才真删
+    vote: (id) => request(`/api/notes/${id}/vote`, { method: 'POST', body: {} }),
+    unvote: (id) => request(`/api/notes/${id}/vote`, { method: 'DELETE' }),
   },
   moments: {
     list: () => request('/api/moments'),

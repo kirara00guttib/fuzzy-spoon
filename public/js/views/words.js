@@ -1,4 +1,5 @@
-// 悄悄话：对彼此说的话，带日期，一条一条存着；也可以录一段说给对方听
+// 悄悄话：对彼此说的话，带日期，一条一条存着；也可以录一段说给对方听。
+// 删掉一句要两个人都点头：先投一票，凑齐两人份才真的消失。
 import { api } from '../api.js';
 import { icon } from '../icons.js';
 import { esc, formatDate, emptyState, toast, viewHead, confirmBox } from '../ui.js';
@@ -14,6 +15,11 @@ import {
 
 export async function render(root, ctx) {
   const { user, avatars } = ctx;
+  const partnerName = (() => {
+    const other = (ctx.accounts || []).find((a) => a.id !== user.id);
+    return other ? other.name : 'TA';
+  })();
+
   let notes = [];
   try {
     const res = await api.notes.list();
@@ -24,7 +30,6 @@ export async function render(root, ctx) {
 
   const canRecord = voiceSupported();
   let recorder = null;
-  let clock = null;
   let ticker = null;
   let preview = null; // { blob, url, seconds, mime }
 
@@ -49,7 +54,6 @@ export async function render(root, ctx) {
             <button class="btn btn-primary" type="submit">${icon('check', { size: 12 })}放进去</button>
           </div>
         </div>
-        ${canRecord ? '' : `<p class="rec-hint">http 打开时浏览器不给网页开麦克风，点「选录音」传一段上来。</p>`}
       </form>
 
       <section>
@@ -67,9 +71,25 @@ export async function render(root, ctx) {
       </section>
     </div>`;
 
+  const list = root.querySelector('[data-list]');
+  const countEl = root.querySelector('[data-count]');
+
   function noteCard(note) {
     const side = note.avatar === 'dog' ? 'dog' : 'cat';
     const hasText = Boolean(note.text && note.text.trim());
+    const votes = note.deleteVotes || [];
+    const iVoted = votes.includes(user.id);
+    const partnerVoted = votes.some((id) => id !== user.id);
+    const voteTag =
+      iVoted || partnerVoted
+        ? `<p class="note-vote">${iVoted ? `${esc(partnerName)} 点头就删` : `${esc(partnerName)} 想删掉这句`}</p>`
+        : '';
+    const delBtn = iVoted
+      ? `<button class="btn btn-sm btn-quiet note-del is-wait" data-del="${note.id}">${icon('close', { size: 12 })}撤销</button>`
+      : partnerVoted
+        ? `<button class="btn btn-sm note-del is-approve" data-del="${note.id}">${icon('check', { size: 12 })}同意删</button>`
+        : `<button class="btn btn-icon btn-quiet note-del" data-del="${note.id}" aria-label="请求删掉这句悄悄话">${icon('trash', { size: 12 })}</button>`;
+
     return `<li class="note from-${side}" data-note="${note.id}">
       <img class="avatar" src="${avatars[side]}" alt="">
       <div class="note-bubble${note.audioUrl ? ' has-voice' : ''}">
@@ -79,12 +99,72 @@ export async function render(root, ctx) {
         </div>
         ${hasText ? `<p class="note-text">${esc(note.text)}</p>` : ''}
         ${note.audioUrl ? voicePlayer(note.audioUrl, { label: `${note.authorName || ''} 的录音` }) : ''}
+        ${voteTag}
       </div>
-      <button class="btn btn-icon btn-quiet note-del" data-del="${note.id}" aria-label="删掉这句悄悄话">${icon('trash', { size: 12 })}</button>
+      ${delBtn}
     </li>`;
   }
 
+  function paintCount() {
+    countEl.textContent = `${list.querySelectorAll('.note').length} 句`;
+  }
+
+  function swap(li, note) {
+    if (!note) return;
+    const index = notes.findIndex((n) => n.id === note.id);
+    if (index >= 0) notes[index] = note;
+    li.insertAdjacentHTML('afterend', noteCard(note));
+    const fresh = li.nextElementSibling;
+    li.remove();
+    bindVoicePlayers(fresh);
+  }
+
   bindVoicePlayers(root);
+
+  // ── 删一句 = 两个人各投一票 ────────────────────────────
+  list.addEventListener('click', async (ev) => {
+    const btn = ev.target.closest('[data-del]');
+    if (!btn || !list.contains(btn)) return;
+    const li = btn.closest('.note');
+    const id = btn.dataset.del;
+    const current = notes.find((n) => n.id === id);
+    if (!current) return;
+    const votes = current.deleteVotes || [];
+    const iVoted = votes.includes(user.id);
+    const partnerVoted = votes.some((x) => x !== user.id);
+    btn.disabled = true;
+
+    try {
+      if (iVoted) {
+        const res = await api.notes.unvote(id);
+        swap(li, res.note);
+        toast('撤销了');
+        return;
+      }
+      if (!partnerVoted) {
+        const yes = await confirmBox('请求删掉这一句？', `两个人都点头才会真的删掉，${partnerName}那份还没点。`);
+        if (!yes) return;
+      }
+      const res = await api.notes.vote(id);
+      if (res.removed) {
+        li.remove();
+        notes = notes.filter((n) => n.id !== id);
+        paintCount();
+        ctx.bumpCount('notes', -1);
+        toast('这句删掉了');
+        if (!list.querySelector('.note')) {
+          list.innerHTML = `<li>${emptyState({ title: '还没有悄悄话', text: '上面写一句，就是这里的第一句了。' })}</li>`;
+        }
+      } else {
+        swap(li, res.note);
+        toast(`记下了，${partnerName}点头才删`);
+      }
+    } catch (err) {
+      toast(err.message, 'err');
+    } finally {
+      btn.disabled = false;
+    }
+  });
 
   // ── 录音 ───────────────────────────────────────────────
   const form = root.querySelector('[data-form]');
@@ -92,6 +172,7 @@ export async function render(root, ctx) {
   const recBtn = form.querySelector('[data-rec]');
   const slot = form.querySelector('[data-rec-slot]');
   const fileInput = form.querySelector('[data-rec-file]');
+  const idleLabel = () => `${icon('mic', { size: 12 })}${canRecord ? '录音' : '选录音'}`;
 
   function clearPreview() {
     if (preview?.url) URL.revokeObjectURL(preview.url);
@@ -124,7 +205,6 @@ export async function render(root, ctx) {
   function stopTicker() {
     if (ticker) clearInterval(ticker);
     ticker = null;
-    clock = null;
   }
 
   async function startRecording() {
@@ -140,12 +220,12 @@ export async function render(root, ctx) {
       recorder = null;
       if (err && err.name === 'NotAllowedError') toast('没拿到麦克风权限，是不是点了拒绝？', 'err');
       else if (err && err.name === 'NotFoundError') toast('找不到麦克风', 'err');
-      else toast(err.message || '录不了音，换「选录音」试试', 'err');
+      else toast(err.message || '这台设备录不了音', 'err');
       return;
     }
     recBtn.classList.add('is-live');
     recBtn.innerHTML = `${icon('stop', { size: 12 })}录着`;
-    let started = performance.now();
+    const started = performance.now();
     paintRecording(0);
     ticker = setInterval(() => {
       const seconds = (performance.now() - started) / 1000;
@@ -158,7 +238,7 @@ export async function render(root, ctx) {
   async function stopRecording() {
     stopTicker();
     recBtn.classList.remove('is-live');
-    recBtn.innerHTML = `${icon('mic', { size: 12 })}${canRecord ? '重录' : '选录音'}`;
+    recBtn.innerHTML = idleLabel();
     if (!recorder) {
       slot.innerHTML = '';
       return;
@@ -191,7 +271,7 @@ export async function render(root, ctx) {
     const drop = ev.target.closest('[data-rec-drop]');
     if (!drop) return;
     clearPreview();
-    recBtn.innerHTML = `${icon('mic', { size: 12 })}${canRecord ? '录音' : '选录音'}`;
+    recBtn.innerHTML = idleLabel();
   });
 
   fileInput.addEventListener('change', async () => {
@@ -239,16 +319,15 @@ export async function render(root, ctx) {
         audio = await api.uploadAudio(preview.blob, preview.seconds);
       }
       const res = await api.notes.add(value, audio);
-      const list = root.querySelector('[data-list]');
       const empty = list.querySelector('.empty');
       if (empty) empty.closest('li').remove();
       list.insertAdjacentHTML('afterbegin', noteCard(res.note));
       bindVoicePlayers(list.firstElementChild);
-      bindDelete(root.querySelector(`[data-note="${res.note.id}"] [data-del]`));
+      notes = [res.note, ...notes];
       textarea.value = '';
       clearPreview();
-      recBtn.innerHTML = `${icon('mic', { size: 12 })}${canRecord ? '录音' : '选录音'}`;
-      root.querySelector('[data-count]').textContent = `${list.querySelectorAll('.note').length} 句`;
+      recBtn.innerHTML = idleLabel();
+      paintCount();
       toast(audio ? '录好了，带过去了' : '放进去了');
       ctx.bumpCount('notes', 1);
       textarea.focus();
@@ -259,29 +338,6 @@ export async function render(root, ctx) {
       btn.innerHTML = label;
     }
   });
-
-  function bindDelete(btn) {
-    if (!btn) return;
-    btn.addEventListener('click', async () => {
-      const yes = await confirmBox('删掉这一句？', '删掉就找不回来了。');
-      if (!yes) return;
-      try {
-        await api.notes.remove(btn.dataset.del);
-        btn.closest('.note').remove();
-        const list = root.querySelector('[data-list]');
-        root.querySelector('[data-count]').textContent = `${list.querySelectorAll('.note').length} 句`;
-        ctx.bumpCount('notes', -1);
-        if (!list.querySelector('.note')) {
-          list.innerHTML = `<li>${emptyState({ title: '还没有悄悄话', text: '上面写一句，就是这里的第一句了。' })}</li>`;
-        }
-        toast('删掉了');
-      } catch (err) {
-        toast(err.message, 'err');
-      }
-    });
-  }
-
-  root.querySelectorAll('[data-del]').forEach(bindDelete);
 
   return () => {
     stopEverything();
